@@ -1,0 +1,73 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-mist text-ink antialiased;
+  background-image:
+    radial-gradient(circle at top left, rgba(255, 232, 214, 0.7), transparent 22%),
+    radial-gradient(circle at top right, rgba(214, 236, 255, 0.7), transparent 20%),
+    linear-gradient(180deg, #fffdf9 0%, #f8fbff 40%, #f9fbfd 100%);
+  min-height: 100vh;
+}
+
+::selection {
+  background: rgba(251, 191, 36, 0.25);
+}
+
+.journey-shell {
+  position: relative;
+  overflow: hidden;
+}
+
+.journey-shell::before,
+.journey-shell::after {
+  content: "";
+  position: absolute;
+  inset: auto;
+  border-radius: 9999px;
+  filter: blur(40px);
+  z-index: 0;
+}
+
+.journey-shell::before {
+  width: 16rem;
+  height: 16rem;
+  top: 6rem;
+  right: -4rem;
+  background: rgba(191, 219, 254, 0.35);
+}
+
+.journey-shell::after {
+  width: 18rem;
+  height: 18rem;
+  left: -6rem;
+  top: 28rem;
+  background: rgba(255, 214, 186, 0.28);
+}
+
+.timeline-line {
+  background:
+    linear-gradient(180deg, rgba(253, 186, 116, 0.2), rgba(59, 130, 246, 0.35), rgba(134, 239, 172, 0.3));
+}
+
+.glass-card {
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.confetti-piece {
+  position: absolute;
+  top: -10%;
+  width: 10px;
+  height: 18px;
+  border-radius: 999px;
+}
