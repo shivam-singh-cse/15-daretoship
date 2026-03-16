@@ -67,24 +67,38 @@ function TopNav({
   authenticated,
   level,
   onSignOut,
+  onMissionClick,
+  onProgressClick,
+  onProjectsClick,
 }: {
   authenticated: boolean;
   level?: string;
   onSignOut?: () => void;
+  onMissionClick?: () => void;
+  onProgressClick?: () => void;
+  onProjectsClick?: () => void;
 }) {
   return (
     <header className="border-b border-black/5 bg-white/90 backdrop-blur-xl">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
         <nav className="hidden items-center gap-8 text-sm text-black/70 md:flex">
-          <span>Mission</span>
-          <span>Progress</span>
-          <span>Projects</span>
+          <button type="button" onClick={onMissionClick} className="transition hover:text-black">
+            Mission
+          </button>
+          <button type="button" onClick={onProgressClick} className="transition hover:text-black">
+            Progress
+          </button>
+          <button type="button" onClick={onProjectsClick} className="transition hover:text-black">
+            Projects
+          </button>
         </nav>
         <div className="flex items-center gap-3">
           {authenticated ? (
             <>
-              <div className="nav-pill rounded-full px-4 py-2 text-sm text-black/70">{level}</div>
+              <div className="rounded-full border border-black/8 bg-black/[0.03] px-4 py-2 text-sm font-medium text-black/65">
+                {level}
+              </div>
               <button
                 type="button"
                 onClick={onSignOut}
@@ -247,6 +261,9 @@ export function DashboardApp() {
   const [authPending, startAuthTransition] = useTransition();
   const [projectPending, startProjectTransition] = useTransition();
   const onboardingHandledRef = useRef<Set<string>>(new Set());
+  const missionSectionRef = useRef<HTMLElement | null>(null);
+  const progressSectionRef = useRef<HTMLElement | null>(null);
+  const projectsSectionRef = useRef<HTMLElement | null>(null);
 
   const completedDays = useMemo(
     () =>
@@ -693,8 +710,20 @@ export function DashboardApp() {
 
   return (
     <main>
-      <TopNav authenticated level={level} onSignOut={handleSignOut} />
-      <section className="grid-dots">
+      <TopNav
+        authenticated
+        level={level}
+        onSignOut={handleSignOut}
+        onMissionClick={() => missionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        onProgressClick={() => progressSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        onProjectsClick={() => {
+          setDetailTab("submissions");
+          requestAnimationFrame(() =>
+            projectsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+          );
+        }}
+      />
+      <section ref={missionSectionRef} className="grid-dots">
         <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
           <div>
             <SectionLabel>PROOF OF WORK DASHBOARD</SectionLabel>
@@ -763,7 +792,7 @@ export function DashboardApp() {
         </div>
       </section>
 
-      <section className="bg-black py-10 text-white">
+      <section ref={progressSectionRef} className="bg-black py-10 text-white">
         <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 text-center sm:px-6 lg:px-8">
           <div>
             <p className="text-4xl font-bold text-[var(--lime)]">{completedDays.length}</p>
@@ -809,7 +838,7 @@ export function DashboardApp() {
         </div>
       </section>
 
-      <section className="section-line bg-[#fbfaf6] py-20">
+      <section ref={projectsSectionRef} className="section-line bg-[#fbfaf6] py-20">
         <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
           <div>
             <SectionLabel>PROOF SCORE</SectionLabel>
