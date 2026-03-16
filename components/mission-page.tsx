@@ -286,7 +286,7 @@ export function MissionPage({ day }: { day: number }) {
   if (!mission) {
     return (
       <div className="mx-auto max-w-4xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="glass-card rounded-[2rem] border border-black/5 p-8 shadow-glow">
+        <div className="border-2 border-black bg-white p-8">
           <p className="text-sm text-black/55">Mission not found.</p>
         </div>
       </div>
@@ -411,18 +411,18 @@ export function MissionPage({ day }: { day: number }) {
         <div className="mb-8 flex items-center justify-between">
           <Link
             href="/dashboard"
-            className="rounded-full border border-black/10 bg-white px-4 py-2 text-sm text-black/65 shadow-glow"
+            className="border-2 border-black bg-white px-4 py-2 text-sm font-black text-black"
           >
             Back to dashboard
           </Link>
-          <div className="rounded-full bg-[var(--blue)] px-4 py-2 text-sm font-medium text-white">
+          <div className="border-2 border-black bg-[var(--blue)] px-4 py-2 text-sm font-black text-white">
             {profile?.xp ?? 0} XP
           </div>
         </div>
 
         <div className="grid gap-8 lg:grid-cols-[1.02fr_0.98fr]">
           <div>
-            <div className="inline-flex rounded-md bg-[var(--lime)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-black">
+            <div className="inline-flex border-2 border-black bg-[var(--lime)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] text-black">
               Day {day} / {mission.phase}
             </div>
             <h1 className="mt-8 text-5xl font-bold leading-[0.94] tracking-[-0.06em] text-black sm:text-6xl">
@@ -433,14 +433,14 @@ export function MissionPage({ day }: { day: number }) {
             <p className="mt-8 max-w-xl text-lg leading-8 text-black/65">{template.intro}</p>
           </div>
 
-          <div className="rounded-[2rem] border border-black/6 bg-white p-6 shadow-glow">
-            <div className="rounded-[1.6rem] bg-[#f4f2ff] p-6">
-              <p className="text-xs uppercase tracking-[0.16em] text-black/45">How to use this page</p>
+          <div className="border-2 border-black bg-white p-6 shadow-[8px_8px_0px_#111]">
+            <div className="border-2 border-black bg-[#f4f2ff] p-6">
+              <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">How to use this page</p>
               <p className="mt-3 text-sm leading-7 text-black/65">
                 Tick the work you completed during the live session, write your summary, and only
                 submit links on shipping days.
               </p>
-              <div className="mt-5 rounded-2xl bg-white px-4 py-4 text-sm text-black/65">
+              <div className="mt-5 border-2 border-black bg-white px-4 py-4 text-sm text-black/65">
                 {completed ? "This day is already marked complete. You can still update it." : "Finish the checklist, then submit your day."}
               </div>
             </div>
@@ -463,14 +463,14 @@ export function MissionPage({ day }: { day: number }) {
                       [key]: !checked,
                     }))
                   }
-                  className={`flex w-full items-start gap-4 rounded-[1.6rem] border px-5 py-5 text-left transition ${
+                  className={`flex w-full items-start gap-4 border-2 px-5 py-5 text-left transition ${
                     checked
-                      ? "border-[var(--blue)] bg-[#eef0ff]"
-                      : "border-black/6 bg-white hover:border-black/12"
+                      ? "border-black bg-[#eef0ff] shadow-[6px_6px_0px_#111]"
+                      : "border-black bg-white hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[6px_6px_0px_#111]"
                   }`}
                 >
                   <div
-                    className={`mt-1 flex h-6 w-6 items-center justify-center rounded-md text-xs font-bold ${
+                    className={`mt-1 flex h-6 w-6 items-center justify-center border-2 border-black text-xs font-black ${
                       checked ? "bg-[var(--blue)] text-white" : "bg-black/[0.05] text-black/45"
                     }`}
                   >
@@ -489,8 +489,8 @@ export function MissionPage({ day }: { day: number }) {
 
           <div className="space-y-4">
             {template.fields.map((field) => (
-              <label key={field.id} className="block rounded-[1.6rem] border border-black/6 bg-white p-5">
-                <p className="text-sm font-bold text-black">{field.label}</p>
+              <label key={field.id} className="block border-2 border-black bg-white p-5">
+                <p className="text-sm font-black text-black">{field.label}</p>
                 {field.type === "url" ? (
                   <input
                     value={fields[field.id] ?? ""}
@@ -501,7 +501,7 @@ export function MissionPage({ day }: { day: number }) {
                       }))
                     }
                     placeholder={field.placeholder}
-                    className="mt-4 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                    className="mt-4 w-full border-2 border-black bg-[#fbfaf6] px-4 py-3 outline-none focus:bg-white"
                   />
                 ) : (
                   <textarea
@@ -514,21 +514,21 @@ export function MissionPage({ day }: { day: number }) {
                     }
                     placeholder={field.placeholder}
                     rows={field.id === "summary" ? 6 : 4}
-                    className="mt-4 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                    className="mt-4 w-full border-2 border-black bg-[#fbfaf6] px-4 py-3 outline-none focus:bg-white"
                   />
                 )}
               </label>
             ))}
 
-            <div className="rounded-[1.6rem] bg-[var(--blue)] p-6 text-white shadow-[4px_4px_0px_#111]">
-              <p className="text-2xl font-bold">Submit today&apos;s progress.</p>
+            <div className="border-2 border-black bg-[var(--blue)] p-6 text-white shadow-[8px_8px_0px_#111]">
+              <p className="text-2xl font-black">Submit today&apos;s progress.</p>
               <p className="mt-3 text-sm leading-7 text-white/75">
                 This saves your checklist, your learning summary, and marks the day complete.
               </p>
               <button
                 type="submit"
                 disabled={pending}
-                className="mt-6 rounded-xl bg-[var(--lime)] px-6 py-4 text-sm font-bold text-black transition hover:brightness-95 disabled:opacity-70"
+                className="mt-6 border-2 border-black bg-[var(--lime)] px-6 py-4 text-sm font-black text-black transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none disabled:opacity-70"
               >
                 {pending ? "Saving..." : "Submit Day"}
               </button>

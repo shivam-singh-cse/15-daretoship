@@ -2,14 +2,98 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { FormEvent, ReactNode, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { getLevelFromXp } from "@/lib/levels";
 import { getMissionByDay, missions } from "@/lib/missions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BuilderUser, ProgressRow, ProjectRow, SubmissionRow } from "@/lib/types";
 
 type AuthMode = "signup" | "signin";
-type DetailTab = "roadmap" | "submissions" | "log" | "stack";
+type DetailTab = "roadmap" | "submissions" | "stack";
+type IdeaTab = "game" | "product";
+
+const roadmapPhases = [
+  {
+    id: "mindset",
+    label: "Days 1-3",
+    title: "Builder Mindset",
+    learn: "You learn how to spot real student problems and turn them into simple ideas.",
+    build: "You build your first product direction and choose a problem worth solving.",
+    goal: "Finish this phase with one clear idea you feel confident building.",
+  },
+  {
+    id: "prompting",
+    label: "Days 4-5",
+    title: "Prompt Like a Builder",
+    learn: "You learn how to ask AI for better screens, features, and code help.",
+    build: "You build stronger prompts that guide AI tools more clearly.",
+    goal: "Use AI as a practical building partner instead of just chatting with it.",
+  },
+  {
+    id: "game",
+    label: "Days 6-8",
+    title: "Build a Simple Game",
+    learn: "You learn how a small project comes together from idea to playable version.",
+    build: "You build one browser game and ship a live link.",
+    goal: "Gain confidence by finishing something fun and real.",
+  },
+  {
+    id: "product",
+    label: "Days 9-13",
+    title: "Build a Micro Product",
+    learn: "You learn how to make an AI product useful, simple, and easy to understand.",
+    build: "You build one small product that solves a real student problem.",
+    goal: "Ship a product people can actually use and show to others.",
+  },
+  {
+    id: "launch",
+    label: "Days 14-15",
+    title: "Launch and Demo",
+    learn: "You learn how to present what you built and explain its value clearly.",
+    build: "You build your launch page and prepare your final demo.",
+    goal: "End the bootcamp with two finished projects and proof of your work.",
+  },
+];
+
+const gameIdeas = [
+  { title: "Reaction Speed Test", description: "Click when the screen changes color and measure reaction time." },
+  { title: "Number Guessing Game", description: "Guess a number between 1 and 100 with hints." },
+  { title: "Typing Speed Test", description: "Measure words per minute and typing accuracy." },
+  { title: "Click Counter Challenge", description: "See how many clicks a user can make in 10 seconds." },
+  { title: "Memory Card Match", description: "Flip cards and match identical pairs." },
+  { title: "Color Match Game", description: "Pick the correct color based on the name shown." },
+  { title: "AI Trivia Quiz", description: "A quiz game with randomly generated questions." },
+  { title: "Dodge the Falling Blocks", description: "Move left or right to avoid falling obstacles." },
+  { title: "Rock Paper Scissors vs AI", description: "Classic game played against an AI opponent." },
+  { title: "Snake Game", description: "A simple version of the classic snake game." },
+];
+
+const productIdeas = [
+  { title: "AI Lecture Notes Cleaner", description: "Paste messy lecture notes and convert them into structured summaries." },
+  { title: "Resume Bullet Improver", description: "Improve resume bullet points using AI suggestions." },
+  { title: "Study Timer + Focus Tracker", description: "A simple Pomodoro-style study timer with progress tracking." },
+  { title: "AI Email Reply Generator", description: "Generate quick responses to emails." },
+  { title: "Meeting Notes Summarizer", description: "Convert raw meeting notes into concise summaries." },
+  { title: "Assignment Reminder Tool", description: "Track assignments and receive reminders." },
+  { title: "AI Instagram Caption Generator", description: "Generate captions based on a short description." },
+  { title: "Startup Idea Generator", description: "Generate startup ideas based on selected categories." },
+  { title: "Habit Tracker", description: "Track daily habits and maintain streaks." },
+  { title: "College Resource Hub", description: "Upload and share study resources among students." },
+];
+
+const learnItems = [
+  "How to identify real problems worth solving",
+  "How to turn a problem into a simple product idea",
+  "How to use AI tools to build software faster",
+  "How to ship and deploy projects online",
+  "How to build and launch micro products with confidence",
+];
+
+const getItems = [
+  "Two real projects you build yourself: one game and one micro product",
+  "A certificate for completing the bootcamp",
+  "Early access to our upcoming student platform",
+];
 
 const xpActions = [
   { label: "Complete a mission", value: "+20" },
@@ -18,42 +102,31 @@ const xpActions = [
 ];
 
 const stackItems = [
-  {
-    title: "Supabase",
-    description: "Handles auth, progress, mission submissions, and project links.",
-  },
-  {
-    title: "Vercel",
-    description: "Deploys the app fast so students can share what they build.",
-  },
-  {
-    title: "Resend",
-    description: "Sends onboarding and reminder emails at the right moment.",
-  },
+  { title: "Supabase", description: "Handles login, progress saving, submissions, and project links." },
+  { title: "Vercel", description: "Deploys the app so students can share their work online." },
+  { title: "Resend", description: "Sends onboarding and reminder emails at the right time." },
 ];
+
+function scrollToRef(ref: React.RefObject<HTMLElement | null>) {
+  ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+}
 
 function Logo() {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--blue)] text-lg font-bold text-[var(--lime)] shadow-glow">
+      <div className="flex h-10 w-10 items-center justify-center border-2 border-black bg-[var(--blue)] text-lg font-black text-[var(--lime)]">
         B
       </div>
-      <p className="text-base font-semibold text-[var(--ink)]">BuildLoop</p>
+      <p className="text-xl font-black tracking-[-0.04em] text-black">BuildLoop</p>
     </div>
   );
 }
 
 function Ticker() {
-  const items = [
-    "TODAY'S MISSION FIRST",
-    "BUILD IN PUBLIC",
-    "SHIP 2 REAL PROJECTS",
-    "15 DAYS OF PROOF",
-    "BEGINNER FRIENDLY",
-  ];
+  const items = ["BUILD 2 REAL PROJECTS", "BEGINNER FRIENDLY", "ONE MISSION EACH DAY", "LEARN BY BUILDING", "LAUNCH IN 15 DAYS"];
 
   return (
-    <div className="overflow-hidden bg-[var(--blue)] py-2 text-[11px] font-bold tracking-[0.24em] text-[var(--lime)]">
+    <div className="border-t-2 border-black bg-[var(--blue)] py-2 text-[11px] font-black tracking-[0.24em] text-[var(--lime)]">
       <div className="flex min-w-max gap-10 whitespace-nowrap px-6">
         {[...items, ...items].map((item, index) => (
           <span key={`${item}-${index}`}>{item}</span>
@@ -70,6 +143,8 @@ function TopNav({
   onMissionClick,
   onProgressClick,
   onProjectsClick,
+  homeLinks,
+  onAuthOpen,
 }: {
   authenticated: boolean;
   level?: string;
@@ -77,46 +152,56 @@ function TopNav({
   onMissionClick?: () => void;
   onProgressClick?: () => void;
   onProjectsClick?: () => void;
+  homeLinks?: Array<{ label: string; onClick: () => void }>;
+  onAuthOpen?: () => void;
 }) {
   return (
-    <header className="border-b border-black/5 bg-white/90 backdrop-blur-xl">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
+    <header className="border-b-2 border-black bg-[#fbfaf6]">
+      <div className="mx-auto flex max-w-6xl items-center justify-between gap-6 px-4 py-5 sm:px-6 lg:px-8">
         <Logo />
-        <nav className="hidden items-center gap-8 text-sm text-black/70 md:flex">
-          <button type="button" onClick={onMissionClick} className="transition hover:text-black">
-            Mission
-          </button>
-          <button type="button" onClick={onProgressClick} className="transition hover:text-black">
-            Progress
-          </button>
-          <button type="button" onClick={onProjectsClick} className="transition hover:text-black">
-            Projects
-          </button>
+        <nav className="hidden items-center gap-8 text-sm font-medium text-black/75 md:flex">
+          {authenticated ? (
+            <>
+              <button type="button" onClick={onMissionClick} className="hover:text-[var(--blue)]">
+                Mission
+              </button>
+              <button type="button" onClick={onProgressClick} className="hover:text-[var(--blue)]">
+                Progress
+              </button>
+              <button type="button" onClick={onProjectsClick} className="hover:text-[var(--blue)]">
+                Projects
+              </button>
+            </>
+          ) : (
+            homeLinks?.map((link) => (
+              <button key={link.label} type="button" onClick={link.onClick} className="hover:text-[var(--blue)]">
+                {link.label}
+              </button>
+            ))
+          )}
         </nav>
         <div className="flex items-center gap-3">
           {authenticated ? (
             <>
-              <div className="rounded-full border border-black/8 bg-black/[0.03] px-4 py-2 text-sm font-medium text-black/65">
+              <div className="border-2 border-black bg-[#f3f0e8] px-4 py-2 text-xs font-black uppercase tracking-[0.14em] text-black">
                 {level}
               </div>
               <button
                 type="button"
                 onClick={onSignOut}
-                className="rounded-full bg-[var(--blue)] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-95"
+                className="border-2 border-black bg-[var(--blue)] px-5 py-3 text-sm font-black text-white transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
               >
                 Sign Out
               </button>
             </>
           ) : (
-            <>
-              <span className="hidden text-sm text-black/70 sm:inline">Sign In</span>
-              <button
-                type="button"
-                className="rounded-full bg-[var(--blue)] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-95"
-              >
-                Get Started
-              </button>
-            </>
+            <button
+              type="button"
+              onClick={onAuthOpen}
+              className="border-2 border-black bg-[var(--blue)] px-5 py-3 text-sm font-black text-white transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
+            >
+              Get Started
+            </button>
           )}
         </div>
       </div>
@@ -125,37 +210,34 @@ function TopNav({
   );
 }
 
-function SectionLabel({ children }: { children: React.ReactNode }) {
+function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <div className="inline-flex rounded-md bg-[var(--lime)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-black">
+    <div className="inline-flex border-2 border-black bg-[var(--lime)] px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-black">
       {children}
     </div>
   );
 }
 
-function DetailTabs({
-  active,
-  setActive,
-}: {
-  active: DetailTab;
-  setActive: (tab: DetailTab) => void;
-}) {
+function BrutalCard({ children, className = "" }: { children: ReactNode; className?: string }) {
+  return <div className={`border-2 border-black bg-white ${className}`}>{children}</div>;
+}
+
+function DetailTabs({ active, setActive }: { active: DetailTab; setActive: (tab: DetailTab) => void }) {
   return (
     <div className="flex flex-wrap gap-2">
       {[
         { id: "roadmap", label: "Roadmap" },
         { id: "submissions", label: "Projects" },
-        { id: "log", label: "Builder Log" },
         { id: "stack", label: "Stack" },
       ].map((tab) => (
         <button
           key={tab.id}
           type="button"
           onClick={() => setActive(tab.id as DetailTab)}
-          className={`rounded-full px-4 py-2 text-sm transition ${
+          className={`border-2 border-black px-4 py-2 text-sm font-black transition ${
             active === tab.id
-              ? "bg-[var(--blue)] text-white"
-              : "nav-pill text-black/70 hover:bg-black/[0.03]"
+              ? "bg-[var(--blue)] text-white shadow-[4px_4px_0px_#111]"
+              : "bg-white text-black hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none"
           }`}
         >
           {tab.label}
@@ -167,10 +249,10 @@ function DetailTabs({
 
 function StatusCard({ title, value }: { title: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-black/6 bg-white px-4 py-4">
-      <p className="text-xs uppercase tracking-[0.16em] text-black/45">{title}</p>
-      <p className="mt-2 text-sm font-bold text-black">{value}</p>
-    </div>
+    <BrutalCard className="p-4">
+      <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">{title}</p>
+      <p className="mt-2 text-sm font-black text-black">{value}</p>
+    </BrutalCard>
   );
 }
 
@@ -184,15 +266,13 @@ function FeatureCard({
   description: string;
 }) {
   return (
-    <div className="rounded-[1.7rem] border border-black/6 bg-white p-6">
-      <div
-        className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent} text-sm font-bold text-[var(--blue)]`}
-      >
+    <BrutalCard className="p-6">
+      <div className={`flex h-11 w-11 items-center justify-center border-2 border-black ${accent} text-sm font-black text-black`}>
         +
       </div>
-      <p className="mt-5 text-xl font-bold text-black">{title}</p>
-      <p className="mt-3 text-sm leading-7 text-black/60">{description}</p>
-    </div>
+      <p className="mt-5 text-xl font-black tracking-[-0.03em] text-black">{title}</p>
+      <p className="mt-3 text-sm leading-7 text-black/70">{description}</p>
+    </BrutalCard>
   );
 }
 
@@ -217,19 +297,19 @@ function SubmissionForm({
         event.preventDefault();
         onSubmit();
       }}
-      className="rounded-[1.7rem] border border-black/6 bg-white p-6"
+      className="border-2 border-black bg-white p-6"
     >
-      <p className="text-lg font-bold text-black">{title}</p>
+      <p className="text-lg font-black text-black">{title}</p>
       <input
         value={value}
         onChange={(event) => onChange(event.target.value)}
         placeholder={placeholder}
-        className="mt-5 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+        className="mt-5 w-full border-2 border-black bg-[#fbfaf6] px-4 py-3 outline-none focus:bg-white"
       />
       <button
         type="submit"
         disabled={pending}
-        className="mt-5 rounded-xl bg-[var(--lime)] px-5 py-3 text-sm font-bold text-black transition hover:brightness-95 disabled:opacity-70"
+        className="mt-5 border-2 border-black bg-[var(--lime)] px-5 py-3 text-sm font-black text-black transition hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none disabled:opacity-70"
       >
         Save link
       </button>
@@ -258,12 +338,20 @@ export function DashboardApp() {
   const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(true);
   const [detailTab, setDetailTab] = useState<DetailTab>("roadmap");
+  const [ideaTab, setIdeaTab] = useState<IdeaTab>("game");
+  const [selectedIdea, setSelectedIdea] = useState<string | null>(null);
+  const [openRoadmapId, setOpenRoadmapId] = useState<string>("mindset");
   const [authPending, startAuthTransition] = useTransition();
   const [projectPending, startProjectTransition] = useTransition();
   const onboardingHandledRef = useRef<Set<string>>(new Set());
+  const authSectionRef = useRef<HTMLElement | null>(null);
   const missionSectionRef = useRef<HTMLElement | null>(null);
   const progressSectionRef = useRef<HTMLElement | null>(null);
   const projectsSectionRef = useRef<HTMLElement | null>(null);
+  const roadmapIntroRef = useRef<HTMLElement | null>(null);
+  const ideasRef = useRef<HTMLElement | null>(null);
+  const learnRef = useRef<HTMLElement | null>(null);
+  const getRef = useRef<HTMLElement | null>(null);
 
   const completedDays = useMemo(
     () =>
@@ -284,6 +372,7 @@ export function DashboardApp() {
   const progressPercent = (completedDays.length / missions.length) * 100;
   const gameProject = projectRows.find((project) => project.type === "game");
   const productProject = projectRows.find((project) => project.type === "product");
+  const visibleIdeas = ideaTab === "game" ? gameIdeas : productIdeas;
 
   async function loadDashboard(userId: string, fallbackName?: string, fallbackEmail?: string) {
     if (!supabase) {
@@ -565,9 +654,9 @@ export function DashboardApp() {
         <TopNav authenticated={false} />
         <div className="grid-dots min-h-[calc(100vh-92px)]">
           <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-            <div className="glass-card rounded-[2rem] border border-black/5 p-8 shadow-glow">
-              <p className="text-sm text-black/55">Loading your mission dashboard...</p>
-            </div>
+            <BrutalCard className="p-8">
+              <p className="text-sm font-medium text-black/60">Loading your mission dashboard...</p>
+            </BrutalCard>
           </div>
         </div>
       </main>
@@ -577,103 +666,116 @@ export function DashboardApp() {
   if (!authUserId || !profile) {
     return (
       <main>
-        <TopNav authenticated={false} />
+        <TopNav
+          authenticated={false}
+          homeLinks={[
+            { label: "Check Roadmap", onClick: () => scrollToRef(roadmapIntroRef) },
+            { label: "Explore Ideas", onClick: () => scrollToRef(ideasRef) },
+            { label: "What You Will Learn", onClick: () => scrollToRef(learnRef) },
+            { label: "What You Will Get", onClick: () => scrollToRef(getRef) },
+          ]}
+          onAuthOpen={() => scrollToRef(authSectionRef)}
+        />
+
         <section className="grid-dots">
-          <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
+          <div className="mx-auto grid max-w-6xl gap-10 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
             <div>
-              <SectionLabel>MISSION DASHBOARD</SectionLabel>
-              <h1 className="mt-8 text-5xl font-bold leading-[0.94] tracking-[-0.06em] text-black sm:text-6xl lg:text-7xl">
-                Build your skills,
+              <SectionLabel>15-DAY AI BOOTCAMP</SectionLabel>
+              <h1 className="mt-8 text-5xl font-black leading-[0.94] tracking-[-0.07em] text-black sm:text-6xl lg:text-7xl">
+                Build your first
                 <br />
-                <span className="text-[var(--blue)]">made visible.</span>
+                <span className="text-[var(--blue)]">AI products.</span>
                 <br />
-                <span className="text-black/25">Your progress, impossible to fake.</span>
+                <span className="text-black/30">One day at a time.</span>
               </h1>
-              <p className="mt-8 max-w-xl text-lg leading-8 text-black/65">
-                A 15-day AI micro-product bootcamp for beginners. One mission each day. Two real
-                products shipped by the end.
+              <p className="mt-8 max-w-xl text-lg leading-8 text-black/70">
+                A beginner-friendly bootcamp for college students. You will build one game, one
+                micro product, and learn how to launch both.
               </p>
-              <div className="mt-10 flex flex-wrap items-center gap-4">
+              <div className="mt-10 flex flex-wrap gap-4">
                 <button
                   type="button"
-                  onClick={() => setAuthMode("signup")}
-                  className="rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition hover:opacity-95"
+                  onClick={() => scrollToRef(authSectionRef)}
+                  className="border-2 border-black bg-[var(--blue)] px-7 py-4 text-sm font-black text-white shadow-[6px_6px_0px_#111] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none"
                 >
-                  Join as Student
+                  Get Started
                 </button>
                 <button
                   type="button"
-                  onClick={() => setAuthMode("signin")}
-                  className="rounded-xl border border-black/10 bg-[var(--lime)] px-7 py-4 text-sm font-bold text-black transition hover:brightness-95"
+                  onClick={() => scrollToRef(roadmapIntroRef)}
+                  className="border-2 border-black bg-[var(--lime)] px-7 py-4 text-sm font-black text-black shadow-[6px_6px_0px_#111] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none"
                 >
-                  Log In
+                  Check Roadmap
                 </button>
               </div>
             </div>
 
-            <div className="glass-card rounded-[2rem] border border-black/5 p-6 shadow-glow">
-              <div className="rounded-[1.6rem] bg-white p-6">
-                <SectionLabel>{authMode === "signup" ? "GET STARTED" : "WELCOME BACK"}</SectionLabel>
-                <div className="mt-5 flex gap-2 rounded-full bg-black/[0.03] p-1">
+            <section ref={authSectionRef}>
+              <BrutalCard className="bg-white p-6 shadow-[8px_8px_0px_#111]">
+                <SectionLabel>{authMode === "signup" ? "JOIN THE JOURNEY" : "WELCOME BACK"}</SectionLabel>
+                <p className="mt-5 text-2xl font-black tracking-[-0.04em] text-black">
+                  {authMode === "signup" ? "Create your account to start building." : "Log in and open your dashboard."}
+                </p>
+                <div className="mt-6 flex gap-2 border-2 border-black bg-[#f1eee5] p-1">
                   {(["signup", "signin"] as const).map((mode) => (
                     <button
                       key={mode}
                       type="button"
                       onClick={() => setAuthMode(mode)}
-                      className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
-                        authMode === mode ? "bg-[var(--blue)] text-white" : "text-black/60"
+                      className={`flex-1 border-2 border-black px-4 py-3 text-sm font-black transition ${
+                        authMode === mode ? "bg-[var(--blue)] text-white" : "bg-white text-black"
                       }`}
                     >
-                      {mode === "signup" ? "Sign Up" : "Sign In"}
+                      {mode === "signup" ? "Sign Up" : "Log In"}
                     </button>
                   ))}
                 </div>
 
                 <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4">
                   {!hasSupabaseEnv ? (
-                    <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                    <div className="border-2 border-black bg-[#ffe08b] px-4 py-3 text-sm font-medium text-black">
                       Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to continue.
                     </div>
                   ) : null}
 
                   {authMode === "signup" ? (
-                    <label className="block text-sm font-medium text-black/70">
+                    <label className="block text-sm font-black text-black">
                       Name
                       <input
                         value={name}
                         onChange={(event) => setName(event.target.value)}
-                        className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                        className="mt-2 w-full border-2 border-black bg-[#fbfaf6] px-4 py-3 outline-none focus:bg-white"
                         placeholder="Your name"
                       />
                     </label>
                   ) : null}
 
-                  <label className="block text-sm font-medium text-black/70">
+                  <label className="block text-sm font-black text-black">
                     Email
                     <input
                       type="email"
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                      className="mt-2 w-full border-2 border-black bg-[#fbfaf6] px-4 py-3 outline-none focus:bg-white"
                       placeholder="you@example.com"
                     />
                   </label>
 
-                  <label className="block text-sm font-medium text-black/70">
+                  <label className="block text-sm font-black text-black">
                     Password
                     <input
                       type="password"
                       value={password}
                       onChange={(event) => setPassword(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
-                      placeholder="Create a password"
+                      className="mt-2 w-full border-2 border-black bg-[#fbfaf6] px-4 py-3 outline-none focus:bg-white"
+                      placeholder={authMode === "signup" ? "Create a password" : "Enter your password"}
                     />
                   </label>
 
                   <button
                     type="submit"
                     disabled={authPending}
-                    className="w-full rounded-xl bg-[var(--blue)] px-6 py-4 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-70"
+                    className="w-full border-2 border-black bg-[var(--blue)] px-6 py-4 text-sm font-black text-white shadow-[6px_6px_0px_#111] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none disabled:opacity-70"
                   >
                     {authPending
                       ? "Please wait..."
@@ -681,26 +783,157 @@ export function DashboardApp() {
                         ? "Create account"
                         : "Open dashboard"}
                   </button>
-                  {statusMessage ? <p className="text-sm text-black/55">{statusMessage}</p> : null}
+
+                  {statusMessage ? <p className="text-sm text-black/70">{statusMessage}</p> : null}
                 </form>
-              </div>
+              </BrutalCard>
+            </section>
+          </div>
+        </section>
+
+        <section ref={roadmapIntroRef} className="border-t-2 border-black bg-[#fbfaf6] py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionLabel>CHECK ROADMAP</SectionLabel>
+            <h2 className="mt-8 text-4xl font-black tracking-[-0.05em] text-black sm:text-5xl">
+              See the journey
+              <br />
+              <span className="text-[var(--blue)]">before you start.</span>
+            </h2>
+            <div className="mt-10 grid gap-4">
+              {roadmapPhases.map((phase) => {
+                const isOpen = openRoadmapId === phase.id;
+                return (
+                  <BrutalCard key={phase.id} className="overflow-hidden">
+                    <button
+                      type="button"
+                      onClick={() => setOpenRoadmapId(isOpen ? "" : phase.id)}
+                      className="flex w-full items-start justify-between gap-4 bg-white px-6 py-5 text-left"
+                    >
+                      <div>
+                        <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">{phase.label}</p>
+                        <p className="mt-2 text-2xl font-black tracking-[-0.03em] text-black">{phase.title}</p>
+                      </div>
+                      <div className="border-2 border-black bg-[var(--lime)] px-3 py-1 text-xs font-black uppercase text-black">
+                        {isOpen ? "Hide" : "Open"}
+                      </div>
+                    </button>
+                    {isOpen ? (
+                      <div className="border-t-2 border-black bg-[#f4f0e6] px-6 py-5 text-sm leading-7 text-black">
+                        <p>
+                          <span className="font-black">What you learn:</span> {phase.learn}
+                        </p>
+                        <p className="mt-3">
+                          <span className="font-black">What you build:</span> {phase.build}
+                        </p>
+                        <p className="mt-3">
+                          <span className="font-black">Goal:</span> {phase.goal}
+                        </p>
+                      </div>
+                    ) : null}
+                  </BrutalCard>
+                );
+              })}
             </div>
           </div>
         </section>
 
-        <section className="bg-black py-10 text-white">
-          <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 text-center sm:px-6 lg:px-8">
-            <div>
-              <p className="text-4xl font-bold text-[var(--lime)]">15</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Days to ship</p>
+        <section ref={ideasRef} className="border-t-2 border-black bg-white py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionLabel>EXPLORE IDEAS</SectionLabel>
+            <div className="mt-8 flex flex-wrap items-center justify-between gap-4">
+              <div>
+                <h2 className="text-4xl font-black tracking-[-0.05em] text-black sm:text-5xl">
+                  Pick a simple idea
+                  <br />
+                  <span className="text-[var(--blue)]">if you feel stuck.</span>
+                </h2>
+                <p className="mt-4 max-w-2xl text-base leading-8 text-black/70">
+                  You can choose a fun game idea or a useful micro product idea. These are here to
+                  help beginners start faster.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                {([
+                  { id: "game", label: "Simple Game Ideas" },
+                  { id: "product", label: "Simple Product Ideas" },
+                ] as const).map((tab) => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => {
+                      setIdeaTab(tab.id);
+                      setSelectedIdea(null);
+                    }}
+                    className={`border-2 border-black px-4 py-3 text-sm font-black transition ${
+                      ideaTab === tab.id
+                        ? "bg-[var(--blue)] text-white shadow-[4px_4px_0px_#111]"
+                        : "bg-white text-black"
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
             </div>
-            <div>
-              <p className="text-4xl font-bold text-[var(--lime)]">2</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Real products</p>
+
+            <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {visibleIdeas.map((idea, index) => {
+                const active = selectedIdea === idea.title;
+                return (
+                  <button
+                    key={idea.title}
+                    type="button"
+                    onClick={() => setSelectedIdea(idea.title)}
+                    className={`border-2 border-black p-5 text-left transition ${
+                      active
+                        ? "bg-[var(--lime)] shadow-[6px_6px_0px_#111]"
+                        : "bg-white hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-[6px_6px_0px_#111]"
+                    }`}
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">
+                      Idea {index + 1}
+                    </p>
+                    <p className="mt-3 text-xl font-black tracking-[-0.03em] text-black">{idea.title}</p>
+                    <p className="mt-3 text-sm leading-7 text-black/70">{idea.description}</p>
+                  </button>
+                );
+              })}
             </div>
-            <div>
-              <p className="text-4xl font-bold text-[var(--lime)]">1</p>
-              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Clear mission daily</p>
+          </div>
+        </section>
+
+        <section ref={learnRef} className="border-t-2 border-black bg-[#fbfaf6] py-20">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionLabel>WHAT YOU WILL LEARN</SectionLabel>
+            <h2 className="mt-8 text-4xl font-black tracking-[-0.05em] text-black sm:text-5xl">
+              Skills that help you
+              <br />
+              <span className="text-[var(--blue)]">build with confidence.</span>
+            </h2>
+            <div className="mt-10 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {learnItems.map((item) => (
+                <BrutalCard key={item} className="p-5">
+                  <p className="text-lg font-black tracking-[-0.03em] text-black">{item}</p>
+                </BrutalCard>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        <section ref={getRef} className="border-t-2 border-b-2 border-black bg-black py-20 text-white">
+          <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+            <SectionLabel>WHAT YOU WILL GET</SectionLabel>
+            <h2 className="mt-8 text-4xl font-black tracking-[-0.05em] sm:text-5xl">
+              Real outcomes,
+              <br />
+              <span className="text-[var(--lime)]">not just lessons.</span>
+            </h2>
+            <div className="mt-10 grid gap-4 md:grid-cols-3">
+              {getItems.map((item) => (
+                <div key={item} className="border-2 border-white bg-black px-5 py-6">
+                  <p className="text-lg font-black text-white">{item}</p>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -714,142 +947,138 @@ export function DashboardApp() {
         authenticated
         level={level}
         onSignOut={handleSignOut}
-        onMissionClick={() => missionSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
-        onProgressClick={() => progressSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" })}
+        onMissionClick={() => scrollToRef(missionSectionRef)}
+        onProgressClick={() => scrollToRef(progressSectionRef)}
         onProjectsClick={() => {
           setDetailTab("submissions");
-          requestAnimationFrame(() =>
-            projectsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
-          );
+          requestAnimationFrame(() => scrollToRef(projectsSectionRef));
         }}
       />
+
       <section ref={missionSectionRef} className="grid-dots">
-        <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
           <div>
-            <SectionLabel>PROOF OF WORK DASHBOARD</SectionLabel>
-            <h1 className="mt-8 text-5xl font-bold leading-[0.94] tracking-[-0.06em] text-black sm:text-6xl lg:text-7xl">
+            <SectionLabel>MISSION DASHBOARD</SectionLabel>
+            <h1 className="mt-8 text-5xl font-black leading-[0.94] tracking-[-0.07em] text-black sm:text-6xl lg:text-7xl">
               Today&apos;s mission,
               <br />
               <span className="text-[var(--blue)]">made obvious.</span>
               <br />
-              <span className="text-black/25">Your journey, one clean step at a time.</span>
+              <span className="text-black/30">One clear next step.</span>
             </h1>
-            <p className="mt-8 max-w-xl text-lg leading-8 text-black/65">
-              Welcome back, {profile.name}. Start the next mission, earn proof through progress,
-              and ship both your game and micro product by day 15.
+            <p className="mt-8 max-w-xl text-lg leading-8 text-black/70">
+              Welcome back, {profile.name}. Start the next mission, track your proof, and submit
+              both project links from one place.
             </p>
             <div className="mt-10 flex flex-wrap items-center gap-4">
               <Link
                 href={`/mission/day-${nextMission.day}`}
-                className="rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition hover:opacity-95"
+                className="border-2 border-black bg-[var(--blue)] px-7 py-4 text-sm font-black text-white shadow-[6px_6px_0px_#111] transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none"
               >
                 Start Day {nextMission.day}
               </Link>
-              <div className="text-sm text-black/55">
-                Next up: <span className="font-semibold text-black">{nextMission.title}</span>
+              <div className="text-sm font-medium text-black/65">
+                Next up: <span className="font-black text-black">{nextMission.title}</span>
               </div>
             </div>
           </div>
 
-          <div className="glass-card rounded-[2rem] border border-black/5 p-6 shadow-glow">
-            <div className="rounded-[1.6rem] bg-white p-6">
-              <SectionLabel>TODAY&apos;S MISSION</SectionLabel>
-              <h2 className="mt-5 text-3xl font-bold tracking-[-0.05em] text-black">{nextMission.title}</h2>
-              <p className="mt-4 text-base leading-7 text-black/65">{nextMission.mission}</p>
+          <BrutalCard className="bg-white p-6 shadow-[8px_8px_0px_#111]">
+            <SectionLabel>TODAY&apos;S MISSION</SectionLabel>
+            <h2 className="mt-5 text-3xl font-black tracking-[-0.05em] text-black">{nextMission.title}</h2>
+            <p className="mt-4 text-base leading-7 text-black/70">{nextMission.mission}</p>
 
-              <div className="mt-6 h-3 overflow-hidden rounded-full bg-black/10">
-                <div
-                  className="h-full rounded-full bg-[var(--blue)] transition-all duration-700"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-
-              <div className="mt-6 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-[#f4f2ff] px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-black/45">Progress</p>
-                  <p className="mt-2 text-2xl font-bold text-black">
-                    {completedDays.length} / {missions.length}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-[#f7ffd5] px-4 py-4">
-                  <p className="text-xs uppercase tracking-[0.16em] text-black/45">XP</p>
-                  <p className="mt-2 text-2xl font-bold text-black">{xp}</p>
-                </div>
-              </div>
-
-              <div className="mt-4 grid grid-cols-2 gap-3">
-                <StatusCard title="Game" value={gameProject ? "Submitted" : "Not started"} />
-                <StatusCard title="Micro Product" value={productProject ? "Submitted" : "Not started"} />
-              </div>
-
-              {statusMessage ? (
-                <div className="mt-4 rounded-2xl bg-[#f3f6ff] px-4 py-3 text-sm text-black/65">
-                  {statusMessage}
-                </div>
-              ) : null}
+            <div className="mt-6 border-2 border-black bg-[#f1eee5] p-1">
+              <div
+                className="h-4 bg-[var(--blue)] transition-all duration-700"
+                style={{ width: `${progressPercent}%` }}
+              />
             </div>
-          </div>
+
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <BrutalCard className="bg-[#eef0ff] px-4 py-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">Progress</p>
+                <p className="mt-2 text-2xl font-black text-black">
+                  {completedDays.length} / {missions.length}
+                </p>
+              </BrutalCard>
+              <BrutalCard className="bg-[#f7ffd5] px-4 py-4">
+                <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">XP</p>
+                <p className="mt-2 text-2xl font-black text-black">{xp}</p>
+              </BrutalCard>
+            </div>
+
+            <div className="mt-4 grid grid-cols-2 gap-3">
+              <StatusCard title="Game" value={gameProject ? "Submitted" : "Not started"} />
+              <StatusCard title="Micro Product" value={productProject ? "Submitted" : "Not started"} />
+            </div>
+
+            {statusMessage ? (
+              <div className="mt-4 border-2 border-black bg-[#f3f6ff] px-4 py-3 text-sm text-black/70">
+                {statusMessage}
+              </div>
+            ) : null}
+          </BrutalCard>
         </div>
       </section>
 
-      <section ref={progressSectionRef} className="bg-black py-10 text-white">
+      <section ref={progressSectionRef} className="border-y-2 border-black bg-black py-10 text-white">
         <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 text-center sm:px-6 lg:px-8">
           <div>
-            <p className="text-4xl font-bold text-[var(--lime)]">{completedDays.length}</p>
-            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Completed days</p>
+            <p className="text-4xl font-black text-[var(--lime)]">{completedDays.length}</p>
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-white/60">Completed days</p>
           </div>
           <div>
-            <p className="text-4xl font-bold text-[var(--lime)]">{xp}</p>
-            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Proof score</p>
+            <p className="text-4xl font-black text-[var(--lime)]">{xp}</p>
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-white/60">Proof score</p>
           </div>
           <div>
-            <p className="text-4xl font-bold text-[var(--lime)]">{level}</p>
-            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Current level</p>
+            <p className="text-4xl font-black text-[var(--lime)]">{level}</p>
+            <p className="mt-2 text-xs font-black uppercase tracking-[0.18em] text-white/60">Current level</p>
           </div>
         </div>
       </section>
 
       <section className="bg-[#fbfaf6] py-20">
         <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
-          <SectionLabel>WHAT YOU SEE HERE</SectionLabel>
-          <h2 className="mt-8 text-4xl font-bold tracking-[-0.05em] text-black sm:text-5xl">
-            Built for beginners who
+          <SectionLabel>WHAT THIS DASHBOARD DOES</SectionLabel>
+          <h2 className="mt-8 text-4xl font-black tracking-[-0.05em] text-black sm:text-5xl">
+            Built to keep your
             <br />
-            <span className="text-[var(--blue)]">actually ship.</span>
+            <span className="text-[var(--blue)]">next move clear.</span>
           </h2>
 
           <div className="mt-12 grid gap-4 md:grid-cols-3">
             <FeatureCard
               accent="bg-[#eef0ff]"
               title="One clear mission"
-              description="When you open the dashboard, the next step is already chosen for you."
+              description="The next day is ready the moment you open the dashboard."
             />
             <FeatureCard
               accent="bg-[#f7ffd5]"
-              title="Proof score"
-              description="XP grows when you complete missions and submit real project links."
+              title="Visible progress"
+              description="You can quickly see how many days are done and what is left."
             />
             <FeatureCard
               accent="bg-[#eef0ff]"
-              title="Public builder record"
-              description="Your submissions, launches, and progress stay attached to your account."
+              title="Project proof"
+              description="Your game and product links stay attached to your account."
             />
           </div>
         </div>
       </section>
 
       <section ref={projectsSectionRef} className="section-line bg-[#fbfaf6] py-20">
-        <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.9fr_1.1fr] lg:px-8">
           <div>
             <SectionLabel>PROOF SCORE</SectionLabel>
-            <h2 className="mt-8 text-4xl font-bold tracking-[-0.05em] text-black sm:text-5xl">
-              Your score is your
+            <h2 className="mt-8 text-4xl font-black tracking-[-0.05em] text-black sm:text-5xl">
+              Progress that
               <br />
-              <span className="text-[var(--blue)]">reputation.</span>
+              <span className="text-[var(--blue)]">actually counts.</span>
             </h2>
-            <p className="mt-6 max-w-md text-base leading-8 text-black/65">
-              Every finished mission and every shipped project adds visible proof that you can
-              build, not just learn.
+            <p className="mt-6 max-w-md text-base leading-8 text-black/70">
+              Each finished mission and each live project adds proof that you can build and ship.
             </p>
           </div>
 
@@ -857,16 +1086,16 @@ export function DashboardApp() {
             {xpActions.map((action, index) => (
               <div
                 key={action.label}
-                className={`flex items-center justify-between rounded-2xl border border-black/6 px-5 py-5 text-sm font-medium ${
+                className={`flex items-center justify-between border-2 border-black px-5 py-5 text-sm font-black ${
                   index === 1
-                    ? "bg-[var(--blue)] text-white"
+                    ? "bg-[var(--blue)] text-white shadow-[6px_6px_0px_#111]"
                     : index === 2
-                      ? "bg-[var(--lime)] text-black"
+                      ? "bg-[var(--lime)] text-black shadow-[6px_6px_0px_#111]"
                       : "bg-white text-black"
                 }`}
               >
                 <span>{action.label}</span>
-                <span className="text-xl font-bold">{action.value}</span>
+                <span className="text-xl">{action.value}</span>
               </div>
             ))}
           </div>
@@ -875,18 +1104,18 @@ export function DashboardApp() {
 
       <section className="section-line bg-[#fbfaf6] py-20">
         <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:px-8">
-          <div className="rounded-[2rem] bg-[var(--blue)] p-8 text-white shadow-[4px_4px_0px_#111]">
+          <div className="border-2 border-black bg-[var(--blue)] p-8 text-white shadow-[8px_8px_0px_#111]">
             <SectionLabel>YOUR CONTROL PANEL</SectionLabel>
-            <h2 className="mt-6 text-4xl font-bold tracking-[-0.05em]">
-              One place for progress, projects, and proof.
+            <h2 className="mt-6 text-4xl font-black tracking-[-0.05em]">
+              One place for missions, projects, and proof.
             </h2>
-            <p className="mt-5 text-base leading-8 text-white/75">
-              No duplicate buttons. No hidden maze. Just one clean view where you start the next
-              mission and review what you have already shipped.
+            <p className="mt-5 text-base leading-8 text-white/80">
+              Start the next mission, review the roadmap, and submit your project links without
+              jumping between different sections.
             </p>
             <Link
               href={`/mission/day-${nextMission.day}`}
-              className="mt-8 inline-flex rounded-xl bg-[var(--lime)] px-6 py-4 text-sm font-bold text-black transition hover:brightness-95"
+              className="mt-8 inline-flex border-2 border-black bg-[var(--lime)] px-6 py-4 text-sm font-black text-black transition hover:translate-x-[3px] hover:translate-y-[3px] hover:shadow-none"
             >
               Start Mission
             </Link>
@@ -900,24 +1129,41 @@ export function DashboardApp() {
                 {missions.map((mission) => {
                   const done = completedDays.includes(mission.day);
                   return (
-                    <div key={mission.day} className="rounded-[1.6rem] border border-black/6 bg-white px-5 py-5">
-                      <div className="flex items-center justify-between gap-3">
+                    <BrutalCard key={mission.day} className="p-5">
+                      <div className="flex items-start justify-between gap-3">
                         <div>
-                          <p className="text-xs uppercase tracking-[0.16em] text-black/45">
+                          <p className="text-xs font-black uppercase tracking-[0.16em] text-black/45">
                             Day {mission.day} / {mission.phase}
                           </p>
-                          <p className="mt-2 text-lg font-bold text-black">{mission.title}</p>
+                          <p className="mt-2 text-xl font-black tracking-[-0.03em] text-black">{mission.title}</p>
                         </div>
                         <div
-                          className={`rounded-full px-3 py-1 text-xs font-bold ${
-                            done ? "bg-[var(--lime)] text-black" : "bg-black/[0.05] text-black/55"
+                          className={`border-2 border-black px-3 py-1 text-xs font-black uppercase ${
+                            done ? "bg-[var(--lime)] text-black" : "bg-[#f1eee5] text-black/65"
                           }`}
                         >
-                          {done ? "Done" : "Locked to next"}
+                          {done ? "Done" : mission.day === nextMission.day ? "Next" : "Upcoming"}
                         </div>
                       </div>
-                      <p className="mt-3 text-sm leading-7 text-black/60">{mission.summary}</p>
-                    </div>
+                      <div className="mt-4 space-y-2 text-sm leading-7 text-black/75">
+                        <p>
+                          <span className="font-black">Learn:</span> {mission.mission}
+                        </p>
+                        <p>
+                          <span className="font-black">Build:</span>{" "}
+                          {mission.phase === "Build a Game"
+                            ? "A simple browser game students can play."
+                            : mission.phase === "Build a Micro Product"
+                              ? "A useful student-focused micro product."
+                              : mission.phase === "Launch"
+                                ? "A launch-ready version and a demo."
+                                : "The thinking and direction for what you will build next."}
+                        </p>
+                        <p>
+                          <span className="font-black">Goal:</span> {mission.summary}
+                        </p>
+                      </div>
+                    </BrutalCard>
                   );
                 })}
               </div>
@@ -941,31 +1187,6 @@ export function DashboardApp() {
                   pending={projectPending}
                   placeholder="https://your-product-url.com"
                 />
-              </div>
-            ) : null}
-
-            {detailTab === "log" ? (
-              <div className="grid gap-3">
-                {submissionRows.length === 0 ? (
-                  <div className="rounded-[1.6rem] border border-black/6 bg-white px-5 py-5 text-sm text-black/55">
-                    Your builder log fills automatically as you complete missions.
-                  </div>
-                ) : (
-                  submissionRows.map((submission) => (
-                    <div key={submission.id} className="rounded-[1.6rem] border border-black/6 bg-white px-5 py-5">
-                      <p className="text-xs uppercase tracking-[0.16em] text-black/45">
-                        Day {submission.day_number}
-                      </p>
-                      <div className="mt-4 space-y-3">
-                        {Object.values(submission.content).map((value) => (
-                          <div key={value} className="rounded-2xl bg-black/[0.03] px-4 py-3 text-sm text-black/65">
-                            {value}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ))
-                )}
               </div>
             ) : null}
 

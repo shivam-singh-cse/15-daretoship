@@ -4,12 +4,12 @@
 
 :root {
   color-scheme: light;
-  --bg: #f7f5ef;
+  --bg: #fbfaf6;
   --ink: #111111;
   --muted: #8f8f95;
   --blue: #2c1dff;
   --lime: #d4ff00;
-  --line: rgba(17, 17, 17, 0.08);
+  --line: rgba(17, 17, 17, 0.16);
 }
 
 html {
@@ -20,45 +20,14 @@ body {
   @apply bg-mist text-ink antialiased;
   font-family: var(--font-space-grotesk), ui-sans-serif, system-ui, sans-serif;
   background-image:
-    radial-gradient(circle at top left, rgba(255, 232, 214, 0.72), transparent 22%),
-    radial-gradient(circle at top right, rgba(214, 236, 255, 0.68), transparent 20%),
-    linear-gradient(180deg, #fcfbf7 0%, #f7f8fb 40%, #f7f5ef 100%);
+    radial-gradient(circle at top left, rgba(255, 232, 214, 0.35), transparent 22%),
+    radial-gradient(circle at top right, rgba(214, 236, 255, 0.3), transparent 20%),
+    linear-gradient(180deg, #fbfaf6 0%, #fbfaf6 100%);
   min-height: 100vh;
 }
 
 ::selection {
   background: rgba(251, 191, 36, 0.25);
-}
-
-.journey-shell {
-  position: relative;
-  overflow: hidden;
-}
-
-.journey-shell::before,
-.journey-shell::after {
-  content: "";
-  position: absolute;
-  inset: auto;
-  border-radius: 9999px;
-  filter: blur(40px);
-  z-index: 0;
-}
-
-.journey-shell::before {
-  width: 16rem;
-  height: 16rem;
-  top: 6rem;
-  right: -4rem;
-  background: rgba(191, 219, 254, 0.35);
-}
-
-.journey-shell::after {
-  width: 18rem;
-  height: 18rem;
-  left: -6rem;
-  top: 28rem;
-  background: rgba(255, 214, 186, 0.28);
 }
 
 .timeline-line {
@@ -67,8 +36,7 @@ body {
 }
 
 .glass-card {
-  background: rgba(255, 255, 255, 0.84);
-  backdrop-filter: blur(12px);
+  background: #ffffff;
 }
 
 .confetti-piece {
@@ -89,6 +57,6 @@ body {
 }
 
 .nav-pill {
-  border: 1px solid rgba(17, 17, 17, 0.08);
-  background: rgba(255, 255, 255, 0.9);
+  border: 2px solid #111111;
+  background: #ffffff;
 }
