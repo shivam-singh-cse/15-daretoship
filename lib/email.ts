@@ -6,7 +6,7 @@ function getEmailContent(kind: EmailKind, name?: string) {
   switch (kind) {
     case "welcome":
       return {
-        subject: "Welcome to the AI Builder Journey",
+        subject: "Welcome to Outwibe",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
             <h2>Welcome${name ? `, ${name}` : ""}</h2>
@@ -55,7 +55,7 @@ export async function sendBuilderEmail(
   const content = getEmailContent(kind, name);
 
   return resend.emails.send({
-    from: "AI Builder Journey <onboarding@resend.dev>",
+    from: "Outwibe <hello@updates.outwibe.com>",
     to,
     subject: content.subject,
     html: content.html,

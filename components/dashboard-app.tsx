@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useMemo, useState, useTransition } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { getLevelFromXp } from "@/lib/levels";
 import { getMissionByDay, missions } from "@/lib/missions";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
@@ -85,6 +85,7 @@ export function DashboardApp() {
   const [loading, setLoading] = useState(true);
   const [authPending, startAuthTransition] = useTransition();
   const [projectPending, startProjectTransition] = useTransition();
+  const onboardingHandledRef = useRef<Set<string>>(new Set());
 
   const completedDays = useMemo(
     () =>
@@ -149,6 +150,50 @@ export function DashboardApp() {
     setLoading(false);
   }
 
+  async function maybeSendOnboardingEmail(user: {
+    id: string;
+    email?: string;
+    email_confirmed_at?: string | null;
+    user_metadata?: Record<string, unknown>;
+  }) {
+    if (!supabase || !user.email || !user.email_confirmed_at) {
+      return;
+    }
+
+    if (user.user_metadata?.onboarded || onboardingHandledRef.current.has(user.id)) {
+      return;
+    }
+
+    onboardingHandledRef.current.add(user.id);
+
+    const response = await fetch("/api/email", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: user.email,
+        name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
+        kind: "welcome",
+      }),
+    }).catch(() => null);
+
+    if (!response?.ok) {
+      onboardingHandledRef.current.delete(user.id);
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({
+      data: {
+        ...user.user_metadata,
+        onboarded: true,
+      },
+    });
+
+    if (error) {
+      onboardingHandledRef.current.delete(user.id);
+      return;
+    }
+  }
+
   useEffect(() => {
     let mounted = true;
 
@@ -166,6 +211,7 @@ export function DashboardApp() {
       if (user) {
         setAuthUserId(user.id);
         await loadDashboard(user.id, user.user_metadata?.name, user.email);
+        await maybeSendOnboardingEmail(user);
       } else {
         setLoading(false);
       }
@@ -179,6 +225,7 @@ export function DashboardApp() {
 
       if (user) {
         await loadDashboard(user.id, user.user_metadata?.name, user.email);
+        await maybeSendOnboardingEmail(user);
       } else {
         setProfile(null);
         setProgressRows([]);
@@ -209,7 +256,10 @@ export function DashboardApp() {
           ? await supabase.auth.signUp({
               email,
               password,
-              options: { data: { name } },
+              options: {
+                data: { name },
+                emailRedirectTo: `${window.location.origin}/auth/callback`,
+              },
             })
           : await supabase.auth.signInWithPassword({ email, password });
 
@@ -229,19 +279,13 @@ export function DashboardApp() {
           level: getLevelFromXp(0),
         });
 
-        await fetch("/api/email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            email: user.email ?? email,
-            name: name || user.user_metadata?.name || "Builder",
-            kind: "welcome",
-          }),
-        }).catch(() => null);
+        setAuthMode("signin");
+        setStatusMessage("Confirmation email sent. Please verify your email, then log in.");
+        return;
       }
 
-      setStatusMessage(authMode === "signup" ? "Account ready. Opening your dashboard..." : "Welcome back.");
-      router.push("/");
+      setStatusMessage("Welcome back.");
+      router.push("/dashboard");
     });
   }
 
