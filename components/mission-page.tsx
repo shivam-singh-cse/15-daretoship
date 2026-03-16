@@ -42,36 +42,49 @@ export function MissionPage({ day }: { day: number }) {
       return;
     }
 
-    supabase.auth.getUser().then(async ({ data }) => {
-      const user = data.user;
+    supabase.auth.getSession().then(async ({ data }) => {
+      const user = data.session?.user;
       if (!user) {
         router.push("/");
         return;
       }
 
       setUserId(user.id);
-      const { data: profileRow } = await supabase.from("users").select("*").eq("id", user.id).maybeSingle();
-      setProfile(profileRow as BuilderUser | null);
+      setProfile({
+        id: user.id,
+        name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
+        email: user.email ?? "",
+        xp: 0,
+        level: getLevelFromXp(0),
+      });
 
-      const { data: submission } = await supabase
-        .from("submissions")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("day_number", day)
-        .maybeSingle();
+      const [profileResult, submissionResult, progressResult] = await Promise.allSettled([
+        supabase.from("users").select("*").eq("id", user.id).maybeSingle(),
+        supabase
+          .from("submissions")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("day_number", day)
+          .maybeSingle(),
+        supabase
+          .from("progress")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("day_number", day)
+          .maybeSingle(),
+      ]);
 
-      if (submission?.content) {
-        setFormValues(submission.content as Record<string, string>);
+      if (profileResult.status === "fulfilled" && profileResult.value.data) {
+        setProfile(profileResult.value.data as BuilderUser);
       }
 
-      const { data: progress } = await supabase
-        .from("progress")
-        .select("*")
-        .eq("user_id", user.id)
-        .eq("day_number", day)
-        .maybeSingle();
+      if (submissionResult.status === "fulfilled" && submissionResult.value.data?.content) {
+        setFormValues(submissionResult.value.data.content as Record<string, string>);
+      }
 
-      setCompleted(Boolean(progress?.completed));
+      if (progressResult.status === "fulfilled") {
+        setCompleted(Boolean(progressResult.value.data?.completed));
+      }
     });
   }, [day, router, supabase]);
 

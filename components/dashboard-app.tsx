@@ -113,20 +113,22 @@ export function DashboardApp() {
       return;
     }
 
-    setLoading(true);
+    const results = await Promise.allSettled([
+      supabase.from("users").select("*").eq("id", userId).maybeSingle(),
+      supabase.from("progress").select("*").eq("user_id", userId).order("day_number"),
+      supabase.from("submissions").select("*").eq("user_id", userId).order("day_number", { ascending: false }),
+      supabase.from("projects").select("*").eq("user_id", userId),
+    ]);
 
-    const [{ data: userRow }, { data: progressData }, { data: submissionData }, { data: projectData }] =
-      await Promise.all([
-        supabase.from("users").select("*").eq("id", userId).maybeSingle(),
-        supabase.from("progress").select("*").eq("user_id", userId).order("day_number"),
-        supabase.from("submissions").select("*").eq("user_id", userId).order("day_number", { ascending: false }),
-        supabase.from("projects").select("*").eq("user_id", userId),
-      ]);
+    const userResult = results[0].status === "fulfilled" ? results[0].value.data : null;
+    const progressResult = results[1].status === "fulfilled" ? results[1].value.data : [];
+    const submissionResult = results[2].status === "fulfilled" ? results[2].value.data : [];
+    const projectResult = results[3].status === "fulfilled" ? results[3].value.data : [];
 
-    let resolvedUser = userRow as BuilderUser | null;
+    let resolvedUser = userResult as BuilderUser | null;
 
     if (!resolvedUser && fallbackEmail) {
-      const { data: insertedUser } = await supabase
+      const inserted = await supabase
         .from("users")
         .upsert({
           id: userId,
@@ -138,16 +140,23 @@ export function DashboardApp() {
         .select()
         .single();
 
-      resolvedUser = insertedUser as BuilderUser;
+      resolvedUser = (inserted.data as BuilderUser | null) ?? {
+        id: userId,
+        name: fallbackName || "Builder",
+        email: fallbackEmail,
+        xp: 0,
+        level: getLevelFromXp(0),
+      };
     }
 
-    setProfile(resolvedUser);
-    setProgressRows((progressData as ProgressRow[]) ?? []);
-    setSubmissionRows((submissionData as SubmissionRow[]) ?? []);
-    setProjectRows((projectData as ProjectRow[]) ?? []);
-    setGameUrl((projectData as ProjectRow[] | null)?.find((row) => row.type === "game")?.url ?? "");
-    setProductUrl((projectData as ProjectRow[] | null)?.find((row) => row.type === "product")?.url ?? "");
-    setLoading(false);
+    if (resolvedUser) {
+      setProfile(resolvedUser);
+    }
+    setProgressRows((progressResult as ProgressRow[]) ?? []);
+    setSubmissionRows((submissionResult as SubmissionRow[]) ?? []);
+    setProjectRows((projectResult as ProjectRow[]) ?? []);
+    setGameUrl((projectResult as ProjectRow[] | null)?.find((row) => row.type === "game")?.url ?? "");
+    setProductUrl((projectResult as ProjectRow[] | null)?.find((row) => row.type === "product")?.url ?? "");
   }
 
   async function maybeSendOnboardingEmail(user: {
@@ -202,16 +211,24 @@ export function DashboardApp() {
       return;
     }
 
-    supabase.auth.getUser().then(async ({ data }) => {
+    supabase.auth.getSession().then(async ({ data }) => {
       if (!mounted) {
         return;
       }
 
-      const user = data.user;
+      const user = data.session?.user;
       if (user) {
         setAuthUserId(user.id);
-        await loadDashboard(user.id, user.user_metadata?.name, user.email);
-        await maybeSendOnboardingEmail(user);
+        setProfile({
+          id: user.id,
+          name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
+          email: user.email ?? "",
+          xp: 0,
+          level: getLevelFromXp(0),
+        });
+        setLoading(false);
+        void loadDashboard(user.id, user.user_metadata?.name, user.email);
+        void maybeSendOnboardingEmail(user);
       } else {
         setLoading(false);
       }
@@ -224,8 +241,18 @@ export function DashboardApp() {
       setAuthUserId(user?.id ?? null);
 
       if (user) {
-        await loadDashboard(user.id, user.user_metadata?.name, user.email);
-        await maybeSendOnboardingEmail(user);
+        setProfile((current) =>
+          current ?? {
+            id: user.id,
+            name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
+            email: user.email ?? "",
+            xp: 0,
+            level: getLevelFromXp(0),
+          },
+        );
+        setLoading(false);
+        void loadDashboard(user.id, user.user_metadata?.name, user.email);
+        void maybeSendOnboardingEmail(user);
       } else {
         setProfile(null);
         setProgressRows([]);

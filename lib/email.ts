@@ -9,6 +9,9 @@ function getEmailContent(kind: EmailKind, name?: string) {
         subject: "Welcome to Outwibe",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
+            <div style="display:inline-block;padding:10px 14px;border-radius:999px;background:#111827;color:#ffffff;font-weight:700;letter-spacing:0.08em;font-size:12px;margin-bottom:18px;">
+              OUTWIBE
+            </div>
             <h2>Welcome${name ? `, ${name}` : ""}</h2>
             <p>You are about to build two real products in 15 days: a fun web game and a useful micro-product.</p>
             <p>Open the dashboard, start today's mission, and keep shipping one step at a time.</p>
@@ -20,6 +23,9 @@ function getEmailContent(kind: EmailKind, name?: string) {
         subject: "Your next builder mission is waiting",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
+            <div style="display:inline-block;padding:10px 14px;border-radius:999px;background:#111827;color:#ffffff;font-weight:700;letter-spacing:0.08em;font-size:12px;margin-bottom:18px;">
+              OUTWIBE
+            </div>
             <h2>Your next mission is ready</h2>
             <p>Take the next small step in your AI Builder Journey today.</p>
             <p>Open your dashboard, complete today's mission, and keep your momentum going.</p>
@@ -31,6 +37,9 @@ function getEmailContent(kind: EmailKind, name?: string) {
         subject: "Demo day is here - launch your products",
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #1f2937;">
+            <div style="display:inline-block;padding:10px 14px;border-radius:999px;background:#111827;color:#ffffff;font-weight:700;letter-spacing:0.08em;font-size:12px;margin-bottom:18px;">
+              OUTWIBE
+            </div>
             <h2>Demo day is here</h2>
             <p>Your products are ready to be shared.</p>
             <p>Launch your game, present your micro-product, and show everyone what you built.</p>
