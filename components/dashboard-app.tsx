@@ -9,56 +9,217 @@ import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import type { BuilderUser, ProgressRow, ProjectRow, SubmissionRow } from "@/lib/types";
 
 type AuthMode = "signup" | "signin";
-type PanelKey = "roadmap" | "tools" | "log" | "discovery" | "projects";
+type DetailTab = "roadmap" | "submissions" | "log" | "stack";
 
-const tools = [
+const xpActions = [
+  { label: "Complete a mission", value: "+20" },
+  { label: "Submit your game", value: "+50" },
+  { label: "Submit your micro product", value: "+100" },
+];
+
+const stackItems = [
   {
-    title: "AI coding tools",
-    description: "Generate layouts, features, and fixes using simple prompts.",
+    title: "Supabase",
+    description: "Handles auth, progress, mission submissions, and project links.",
   },
   {
     title: "Vercel",
-    description: "Deploy your app and share links quickly.",
-  },
-  {
-    title: "Supabase",
-    description: "Store users, submissions, and progress in one place.",
+    description: "Deploys the app fast so students can share what they build.",
   },
   {
     title: "Resend",
-    description: "Send welcome and reminder emails automatically.",
+    description: "Sends onboarding and reminder emails at the right moment.",
   },
 ];
 
-const discoveryTips = [
-  "Personal frustrations",
-  "Reddit discussions",
-  "Twitter complaints",
-  "Observing real life",
-];
-
-function ExpandablePanel({
-  open,
-  title,
-  children,
-}: {
-  open: boolean;
-  title: string;
-  children: React.ReactNode;
-}) {
+function Logo() {
   return (
-    <div
-      className={`grid transition-all duration-500 ${
-        open ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
-      }`}
-    >
-      <div className="overflow-hidden">
-        <div className="glass-card rounded-[2rem] border border-white/80 p-6 shadow-glow">
-          <h3 className="text-xl font-semibold text-slate-900">{title}</h3>
-          <div className="mt-5">{children}</div>
-        </div>
+    <div className="flex items-center gap-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--blue)] text-lg font-bold text-[var(--lime)] shadow-glow">
+        B
+      </div>
+      <p className="text-base font-semibold text-[var(--ink)]">BuildLoop</p>
+    </div>
+  );
+}
+
+function Ticker() {
+  const items = [
+    "TODAY'S MISSION FIRST",
+    "BUILD IN PUBLIC",
+    "SHIP 2 REAL PROJECTS",
+    "15 DAYS OF PROOF",
+    "BEGINNER FRIENDLY",
+  ];
+
+  return (
+    <div className="overflow-hidden bg-[var(--blue)] py-2 text-[11px] font-bold tracking-[0.24em] text-[var(--lime)]">
+      <div className="flex min-w-max gap-10 whitespace-nowrap px-6">
+        {[...items, ...items].map((item, index) => (
+          <span key={`${item}-${index}`}>{item}</span>
+        ))}
       </div>
     </div>
+  );
+}
+
+function TopNav({
+  authenticated,
+  level,
+  onSignOut,
+}: {
+  authenticated: boolean;
+  level?: string;
+  onSignOut?: () => void;
+}) {
+  return (
+    <header className="border-b border-black/5 bg-white/90 backdrop-blur-xl">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
+        <Logo />
+        <nav className="hidden items-center gap-8 text-sm text-black/70 md:flex">
+          <span>Mission</span>
+          <span>Progress</span>
+          <span>Projects</span>
+        </nav>
+        <div className="flex items-center gap-3">
+          {authenticated ? (
+            <>
+              <div className="nav-pill rounded-full px-4 py-2 text-sm text-black/70">{level}</div>
+              <button
+                type="button"
+                onClick={onSignOut}
+                className="rounded-full bg-[var(--blue)] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-95"
+              >
+                Sign Out
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="hidden text-sm text-black/70 sm:inline">Sign In</span>
+              <button
+                type="button"
+                className="rounded-full bg-[var(--blue)] px-5 py-2.5 text-sm font-medium text-white transition hover:opacity-95"
+              >
+                Get Started
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+      <Ticker />
+    </header>
+  );
+}
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="inline-flex rounded-md bg-[var(--lime)] px-3 py-1 text-[11px] font-bold uppercase tracking-[0.16em] text-black">
+      {children}
+    </div>
+  );
+}
+
+function DetailTabs({
+  active,
+  setActive,
+}: {
+  active: DetailTab;
+  setActive: (tab: DetailTab) => void;
+}) {
+  return (
+    <div className="flex flex-wrap gap-2">
+      {[
+        { id: "roadmap", label: "Roadmap" },
+        { id: "submissions", label: "Projects" },
+        { id: "log", label: "Builder Log" },
+        { id: "stack", label: "Stack" },
+      ].map((tab) => (
+        <button
+          key={tab.id}
+          type="button"
+          onClick={() => setActive(tab.id as DetailTab)}
+          className={`rounded-full px-4 py-2 text-sm transition ${
+            active === tab.id
+              ? "bg-[var(--blue)] text-white"
+              : "nav-pill text-black/70 hover:bg-black/[0.03]"
+          }`}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function StatusCard({ title, value }: { title: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-black/6 bg-white px-4 py-4">
+      <p className="text-xs uppercase tracking-[0.16em] text-black/45">{title}</p>
+      <p className="mt-2 text-sm font-bold text-black">{value}</p>
+    </div>
+  );
+}
+
+function FeatureCard({
+  accent,
+  title,
+  description,
+}: {
+  accent: string;
+  title: string;
+  description: string;
+}) {
+  return (
+    <div className="rounded-[1.7rem] border border-black/6 bg-white p-6">
+      <div
+        className={`flex h-11 w-11 items-center justify-center rounded-xl ${accent} text-sm font-bold text-[var(--blue)]`}
+      >
+        +
+      </div>
+      <p className="mt-5 text-xl font-bold text-black">{title}</p>
+      <p className="mt-3 text-sm leading-7 text-black/60">{description}</p>
+    </div>
+  );
+}
+
+function SubmissionForm({
+  title,
+  value,
+  onChange,
+  onSubmit,
+  pending,
+  placeholder,
+}: {
+  title: string;
+  value: string;
+  onChange: (value: string) => void;
+  onSubmit: () => void;
+  pending: boolean;
+  placeholder: string;
+}) {
+  return (
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+      className="rounded-[1.7rem] border border-black/6 bg-white p-6"
+    >
+      <p className="text-lg font-bold text-black">{title}</p>
+      <input
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        placeholder={placeholder}
+        className="mt-5 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+      />
+      <button
+        type="submit"
+        disabled={pending}
+        className="mt-5 rounded-xl bg-[var(--lime)] px-5 py-3 text-sm font-bold text-black transition hover:brightness-95 disabled:opacity-70"
+      >
+        Save link
+      </button>
+    </form>
   );
 }
 
@@ -78,11 +239,11 @@ export function DashboardApp() {
   const [progressRows, setProgressRows] = useState<ProgressRow[]>([]);
   const [submissionRows, setSubmissionRows] = useState<SubmissionRow[]>([]);
   const [projectRows, setProjectRows] = useState<ProjectRow[]>([]);
-  const [panel, setPanel] = useState<PanelKey | null>(null);
   const [gameUrl, setGameUrl] = useState("");
   const [productUrl, setProductUrl] = useState("");
   const [statusMessage, setStatusMessage] = useState("");
   const [loading, setLoading] = useState(true);
+  const [detailTab, setDetailTab] = useState<DetailTab>("roadmap");
   const [authPending, startAuthTransition] = useTransition();
   const [projectPending, startProjectTransition] = useTransition();
   const onboardingHandledRef = useRef<Set<string>>(new Set());
@@ -96,7 +257,7 @@ export function DashboardApp() {
     [progressRows],
   );
 
-  const nextMissionDay = useMemo(() => {
+  const nextMission = useMemo(() => {
     const nextDay = missions.find((mission) => !completedDays.includes(mission.day))?.day ?? 15;
     return getMissionByDay(nextDay) ?? missions[0];
   }, [completedDays]);
@@ -104,8 +265,8 @@ export function DashboardApp() {
   const xp = profile?.xp ?? 0;
   const level = profile?.level ?? "Explorer";
   const progressPercent = (completedDays.length / missions.length) * 100;
-  const gameComplete = projectRows.some((project) => project.type === "game");
-  const productComplete = projectRows.some((project) => project.type === "product");
+  const gameProject = projectRows.find((project) => project.type === "game");
+  const productProject = projectRows.find((project) => project.type === "product");
 
   async function loadDashboard(userId: string, fallbackName?: string, fallbackEmail?: string) {
     if (!supabase) {
@@ -168,7 +329,6 @@ export function DashboardApp() {
     if (!supabase || !user.email || !user.email_confirmed_at) {
       return;
     }
-
     if (user.user_metadata?.onboarded || onboardingHandledRef.current.has(user.id)) {
       return;
     }
@@ -199,7 +359,6 @@ export function DashboardApp() {
 
     if (error) {
       onboardingHandledRef.current.delete(user.id);
-      return;
     }
   }
 
@@ -217,21 +376,22 @@ export function DashboardApp() {
       }
 
       const user = data.session?.user;
-      if (user) {
-        setAuthUserId(user.id);
-        setProfile({
-          id: user.id,
-          name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
-          email: user.email ?? "",
-          xp: 0,
-          level: getLevelFromXp(0),
-        });
+      if (!user) {
         setLoading(false);
-        void loadDashboard(user.id, user.user_metadata?.name, user.email);
-        void maybeSendOnboardingEmail(user);
-      } else {
-        setLoading(false);
+        return;
       }
+
+      setAuthUserId(user.id);
+      setProfile({
+        id: user.id,
+        name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
+        email: user.email ?? "",
+        xp: 0,
+        level: getLevelFromXp(0),
+      });
+      setLoading(false);
+      void loadDashboard(user.id, user.user_metadata?.name, user.email);
+      void maybeSendOnboardingEmail(user);
     });
 
     const {
@@ -240,26 +400,27 @@ export function DashboardApp() {
       const user = session?.user ?? null;
       setAuthUserId(user?.id ?? null);
 
-      if (user) {
-        setProfile((current) =>
-          current ?? {
-            id: user.id,
-            name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
-            email: user.email ?? "",
-            xp: 0,
-            level: getLevelFromXp(0),
-          },
-        );
-        setLoading(false);
-        void loadDashboard(user.id, user.user_metadata?.name, user.email);
-        void maybeSendOnboardingEmail(user);
-      } else {
+      if (!user) {
         setProfile(null);
         setProgressRows([]);
         setSubmissionRows([]);
         setProjectRows([]);
         setLoading(false);
+        return;
       }
+
+      setProfile((current) =>
+        current ?? {
+          id: user.id,
+          name: typeof user.user_metadata?.name === "string" ? user.user_metadata.name : "Builder",
+          email: user.email ?? "",
+          xp: 0,
+          level: getLevelFromXp(0),
+        },
+      );
+      setLoading(false);
+      void loadDashboard(user.id, user.user_metadata?.name, user.email);
+      void maybeSendOnboardingEmail(user);
     });
 
     return () => {
@@ -305,9 +466,8 @@ export function DashboardApp() {
           xp: 0,
           level: getLevelFromXp(0),
         });
-
         setAuthMode("signin");
-        setStatusMessage("Confirmation email sent. Please verify your email, then log in.");
+        setStatusMessage("Confirmation email sent. Verify your email, then log in.");
         return;
       }
 
@@ -384,386 +544,417 @@ export function DashboardApp() {
 
   if (loading) {
     return (
-      <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
-        <div className="glass-card rounded-[2rem] border border-white/80 p-8 shadow-glow">
-          <p className="text-sm text-slate-500">Loading your mission dashboard...</p>
+      <main>
+        <TopNav authenticated={false} />
+        <div className="grid-dots min-h-[calc(100vh-92px)]">
+          <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:px-8">
+            <div className="glass-card rounded-[2rem] border border-black/5 p-8 shadow-glow">
+              <p className="text-sm text-black/55">Loading your mission dashboard...</p>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
     );
   }
 
   if (!authUserId || !profile) {
     return (
-      <div className="mx-auto max-w-6xl px-4 pb-20 pt-12 sm:px-6 lg:px-8 lg:pt-20">
-        <div className="grid gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div className="animate-fadeUp">
-            <div className="inline-flex rounded-full border border-white/70 bg-white/80 px-4 py-2 text-sm text-slate-600 shadow-glow">
-              Calm, guided, beginner-friendly
+      <main>
+        <TopNav authenticated={false} />
+        <section className="grid-dots">
+          <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
+            <div>
+              <SectionLabel>MISSION DASHBOARD</SectionLabel>
+              <h1 className="mt-8 text-5xl font-bold leading-[0.94] tracking-[-0.06em] text-black sm:text-6xl lg:text-7xl">
+                Build your skills,
+                <br />
+                <span className="text-[var(--blue)]">made visible.</span>
+                <br />
+                <span className="text-black/25">Your progress, impossible to fake.</span>
+              </h1>
+              <p className="mt-8 max-w-xl text-lg leading-8 text-black/65">
+                A 15-day AI micro-product bootcamp for beginners. One mission each day. Two real
+                products shipped by the end.
+              </p>
+              <div className="mt-10 flex flex-wrap items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("signup")}
+                  className="rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition hover:opacity-95"
+                >
+                  Join as Student
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode("signin")}
+                  className="rounded-xl border border-black/10 bg-[var(--lime)] px-7 py-4 text-sm font-bold text-black transition hover:brightness-95"
+                >
+                  Log In
+                </button>
+              </div>
             </div>
-            <h1 className="mt-6 max-w-3xl text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl lg:text-6xl">
-              Build Your First AI Products in 15 Days
-            </h1>
-            <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-600 sm:text-xl">
-              The journey now starts with one clear focus: today&apos;s mission.
-            </p>
-            <p className="mt-3 max-w-xl text-base text-slate-500">
-              Create an account to unlock daily missions, XP, progress sync, and project submissions.
-            </p>
-          </div>
 
-          <div className="glass-card rounded-[2rem] border border-white/80 p-6 shadow-glow">
-            <div className="rounded-[1.5rem] bg-hero-gradient p-6">
-              <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold text-slate-700">Start your journey</p>
-                <div className="rounded-full bg-white/80 px-3 py-1 text-xs font-medium text-slate-600">
-                  Supabase Auth
+            <div className="glass-card rounded-[2rem] border border-black/5 p-6 shadow-glow">
+              <div className="rounded-[1.6rem] bg-white p-6">
+                <SectionLabel>{authMode === "signup" ? "GET STARTED" : "WELCOME BACK"}</SectionLabel>
+                <div className="mt-5 flex gap-2 rounded-full bg-black/[0.03] p-1">
+                  {(["signup", "signin"] as const).map((mode) => (
+                    <button
+                      key={mode}
+                      type="button"
+                      onClick={() => setAuthMode(mode)}
+                      className={`flex-1 rounded-full px-4 py-2 text-sm font-medium transition ${
+                        authMode === mode ? "bg-[var(--blue)] text-white" : "text-black/60"
+                      }`}
+                    >
+                      {mode === "signup" ? "Sign Up" : "Sign In"}
+                    </button>
+                  ))}
                 </div>
-              </div>
 
-              <div className="mt-5 flex gap-2 rounded-full bg-white/70 p-1">
-                {(["signup", "signin"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    type="button"
-                    onClick={() => setAuthMode(mode)}
-                    className={`flex-1 rounded-full px-4 py-2 text-sm transition ${
-                      authMode === mode ? "bg-slate-900 text-white" : "text-slate-600"
-                    }`}
-                  >
-                    {mode === "signup" ? "Sign up" : "Sign in"}
-                  </button>
-                ))}
-              </div>
+                <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4">
+                  {!hasSupabaseEnv ? (
+                    <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
+                      Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to continue.
+                    </div>
+                  ) : null}
 
-              <form onSubmit={handleAuthSubmit} className="mt-6 space-y-4">
-                {!hasSupabaseEnv ? (
-                  <div className="rounded-2xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
-                    Add `SUPABASE_URL` and `SUPABASE_ANON_KEY` to enable signup.
-                  </div>
-                ) : null}
-                {authMode === "signup" ? (
-                  <label className="block text-sm text-slate-600">
-                    Name
+                  {authMode === "signup" ? (
+                    <label className="block text-sm font-medium text-black/70">
+                      Name
+                      <input
+                        value={name}
+                        onChange={(event) => setName(event.target.value)}
+                        className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                        placeholder="Your name"
+                      />
+                    </label>
+                  ) : null}
+
+                  <label className="block text-sm font-medium text-black/70">
+                    Email
                     <input
-                      value={name}
-                      onChange={(event) => setName(event.target.value)}
-                      className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-                      placeholder="Shivam"
+                      type="email"
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                      placeholder="you@example.com"
                     />
                   </label>
-                ) : null}
-                <label className="block text-sm text-slate-600">
-                  Email
-                  <input
-                    type="email"
-                    value={email}
-                    onChange={(event) => setEmail(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-                    placeholder="you@example.com"
-                  />
-                </label>
-                <label className="block text-sm text-slate-600">
-                  Password
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(event) => setPassword(event.target.value)}
-                    className="mt-2 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-                    placeholder="Create a password"
-                  />
-                </label>
-                <button
-                  type="submit"
-                  disabled={authPending}
-                  className="w-full rounded-full bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-70"
-                >
-                  {authPending ? "Please wait..." : authMode === "signup" ? "Create account" : "Enter dashboard"}
-                </button>
-                {statusMessage ? <p className="text-sm text-slate-500">{statusMessage}</p> : null}
-              </form>
+
+                  <label className="block text-sm font-medium text-black/70">
+                    Password
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      className="mt-2 w-full rounded-2xl border border-black/10 bg-white px-4 py-3 outline-none transition focus:border-[var(--blue)]"
+                      placeholder="Create a password"
+                    />
+                  </label>
+
+                  <button
+                    type="submit"
+                    disabled={authPending}
+                    className="w-full rounded-xl bg-[var(--blue)] px-6 py-4 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-70"
+                  >
+                    {authPending
+                      ? "Please wait..."
+                      : authMode === "signup"
+                        ? "Create account"
+                        : "Open dashboard"}
+                  </button>
+                  {statusMessage ? <p className="text-sm text-black/55">{statusMessage}</p> : null}
+                </form>
+              </div>
             </div>
           </div>
-        </div>
-      </div>
+        </section>
+
+        <section className="bg-black py-10 text-white">
+          <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 text-center sm:px-6 lg:px-8">
+            <div>
+              <p className="text-4xl font-bold text-[var(--lime)]">15</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Days to ship</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold text-[var(--lime)]">2</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Real products</p>
+            </div>
+            <div>
+              <p className="text-4xl font-bold text-[var(--lime)]">1</p>
+              <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Clear mission daily</p>
+            </div>
+          </div>
+        </section>
+      </main>
     );
   }
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pb-20 pt-10 sm:px-6 lg:px-8 lg:pt-14">
-      <section className="grid gap-8 lg:grid-cols-[1.12fr_0.88fr] lg:items-start">
-        <div className="glass-card rounded-[2rem] border border-white/80 p-6 shadow-glow">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-                Mission Dashboard
-              </p>
-              <h1 className="mt-3 text-4xl font-semibold tracking-tight text-slate-900 sm:text-5xl">
-                Welcome {profile.name}
-              </h1>
-              <p className="mt-4 text-sm leading-7 text-slate-600">
-                Today&apos;s mission keeps the journey simple. Focus on one clear task, finish it,
-                and your next step will unlock automatically.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleSignOut}
-              className="rounded-full bg-white px-4 py-2 text-sm text-slate-600 transition hover:bg-slate-100"
-            >
-              Sign out
-            </button>
-          </div>
-
-          <div className="mt-8 grid gap-4 rounded-[1.75rem] bg-hero-gradient p-6 lg:grid-cols-[1fr_220px]">
-            <div>
-              <p className="text-sm font-medium text-slate-600">Day {nextMissionDay.day} Mission</p>
-              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-900">
-                {nextMissionDay.title}
-              </h2>
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-slate-600">
-                {nextMissionDay.mission}
-              </p>
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  href={`/mission/day-${nextMissionDay.day}`}
-                  className="rounded-full bg-slate-900 px-6 py-3 text-sm font-medium text-white transition hover:-translate-y-0.5 hover:bg-slate-800"
-                >
-                  Start Mission
-                </Link>
-                <button
-                  type="button"
-                  onClick={() => setPanel(panel === "roadmap" ? null : "roadmap")}
-                  className="rounded-full bg-white/80 px-5 py-3 text-sm text-slate-700 transition hover:bg-white"
-                >
-                  View Roadmap
-                </button>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <div className="rounded-[1.5rem] bg-white/75 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Progress</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">
-                  {completedDays.length} / {missions.length}
-                </p>
-              </div>
-              <div className="rounded-[1.5rem] bg-white/75 px-4 py-4">
-                <p className="text-xs uppercase tracking-[0.2em] text-slate-500">XP</p>
-                <p className="mt-2 text-2xl font-semibold text-slate-900">{xp} XP</p>
-                <p className="mt-1 text-xs text-slate-500">{level}</p>
-              </div>
-            </div>
-          </div>
-
-          <div className="mt-6">
-            <div className="mb-2 flex items-center justify-between text-sm text-slate-600">
-              <span>Builder progress</span>
-              <span>{Math.round(progressPercent)}%</span>
-            </div>
-            <div className="h-2 overflow-hidden rounded-full bg-slate-200">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-amber-400 via-sky-400 to-emerald-400 transition-all duration-700"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
-
-          <div className="mt-6 grid gap-3 sm:grid-cols-2">
-            <div className="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Game</p>
-              <p className="mt-2 text-sm font-medium text-slate-800">
-                {gameComplete ? "Completed" : "Not started"}
-              </p>
-            </div>
-            <div className="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Micro Product</p>
-              <p className="mt-2 text-sm font-medium text-slate-800">
-                {productComplete ? "Completed" : "Not started"}
-              </p>
-            </div>
-          </div>
-
-          {statusMessage ? (
-            <div className="mt-6 rounded-[1.5rem] bg-emerald-50 px-5 py-4 text-sm text-emerald-700">
-              {statusMessage}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="space-y-5">
-          <div className="glass-card rounded-[2rem] border border-white/80 p-6 shadow-glow">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold uppercase tracking-[0.24em] text-slate-500">
-                  Level
-                </p>
-                <h2 className="mt-2 text-2xl font-semibold text-slate-900">{level}</h2>
-              </div>
-              <div className="rounded-full bg-slate-900 px-4 py-2 text-sm text-white">{xp} XP</div>
-            </div>
-            <div className="mt-5 grid grid-cols-3 gap-2">
-              {missions.map((mission) => {
-                const done = completedDays.includes(mission.day);
-                return (
-                  <div
-                    key={mission.day}
-                    className={`rounded-2xl px-3 py-3 text-center text-sm transition ${
-                      done ? "bg-slate-900 text-white" : "bg-slate-100 text-slate-500"
-                    }`}
-                  >
-                    Day {mission.day} {done ? "[done]" : "[ ]"}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="glass-card rounded-[2rem] border border-white/80 p-4 shadow-glow">
-            {[
-              { key: "discovery", label: "View Discovery Tips" },
-              { key: "roadmap", label: "View Roadmap" },
-              { key: "tools", label: "View Tools" },
-              { key: "projects", label: "View Project Submissions" },
-              { key: "log", label: "View Builder Log" },
-            ].map((item) => (
-              <button
-                key={item.key}
-                type="button"
-                onClick={() => setPanel(panel === item.key ? null : (item.key as PanelKey))}
-                className="flex w-full items-center justify-between rounded-[1.5rem] px-4 py-4 text-left text-sm text-slate-700 transition hover:bg-slate-50"
+    <main>
+      <TopNav authenticated level={level} onSignOut={handleSignOut} />
+      <section className="grid-dots">
+        <div className="mx-auto grid max-w-6xl gap-12 px-4 pb-16 pt-14 sm:px-6 lg:grid-cols-[1.05fr_0.95fr] lg:px-8 lg:pt-20">
+          <div>
+            <SectionLabel>PROOF OF WORK DASHBOARD</SectionLabel>
+            <h1 className="mt-8 text-5xl font-bold leading-[0.94] tracking-[-0.06em] text-black sm:text-6xl lg:text-7xl">
+              Today&apos;s mission,
+              <br />
+              <span className="text-[var(--blue)]">made obvious.</span>
+              <br />
+              <span className="text-black/25">Your journey, one clean step at a time.</span>
+            </h1>
+            <p className="mt-8 max-w-xl text-lg leading-8 text-black/65">
+              Welcome back, {profile.name}. Start the next mission, earn proof through progress,
+              and ship both your game and micro product by day 15.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-4">
+              <Link
+                href={`/mission/day-${nextMission.day}`}
+                className="rounded-xl bg-[var(--blue)] px-7 py-4 text-sm font-bold text-white transition hover:opacity-95"
               >
-                <span>{item.label}</span>
-                <span>{panel === item.key ? "Close" : "Open"}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <section className="mt-8 space-y-4">
-        <ExpandablePanel open={panel === "discovery"} title="Discovery Sprint">
-          <div className="grid gap-3 sm:grid-cols-2">
-            {discoveryTips.map((tip) => (
-              <div key={tip} className="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-                <p className="text-sm font-medium text-slate-800">{tip}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-500">
-                  Use this as a source for finding real student problems.
-                </p>
+                Start Day {nextMission.day}
+              </Link>
+              <div className="text-sm text-black/55">
+                Next up: <span className="font-semibold text-black">{nextMission.title}</span>
               </div>
-            ))}
+            </div>
           </div>
-        </ExpandablePanel>
 
-        <ExpandablePanel open={panel === "roadmap"} title="Roadmap Timeline">
-          <div className="space-y-3">
-            {missions.map((mission) => (
-              <div key={mission.day} className="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <div>
-                    <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                      Day {mission.day} / {mission.phase}
-                    </p>
-                    <p className="mt-2 font-medium text-slate-900">{mission.title}</p>
-                  </div>
-                  {completedDays.includes(mission.day) ? (
-                    <span className="rounded-full bg-slate-900 px-3 py-1 text-xs text-white">
-                      Done
-                    </span>
-                  ) : null}
-                </div>
-                <p className="mt-3 text-sm leading-7 text-slate-600">{mission.summary}</p>
+          <div className="glass-card rounded-[2rem] border border-black/5 p-6 shadow-glow">
+            <div className="rounded-[1.6rem] bg-white p-6">
+              <SectionLabel>TODAY&apos;S MISSION</SectionLabel>
+              <h2 className="mt-5 text-3xl font-bold tracking-[-0.05em] text-black">{nextMission.title}</h2>
+              <p className="mt-4 text-base leading-7 text-black/65">{nextMission.mission}</p>
+
+              <div className="mt-6 h-3 overflow-hidden rounded-full bg-black/10">
+                <div
+                  className="h-full rounded-full bg-[var(--blue)] transition-all duration-700"
+                  style={{ width: `${progressPercent}%` }}
+                />
               </div>
-            ))}
-          </div>
-        </ExpandablePanel>
 
-        <ExpandablePanel open={panel === "tools"} title="Tools You Will Use">
-          <div className="grid gap-3">
-            {tools.map((tool) => (
-              <div key={tool.title} className="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-                <p className="font-medium text-slate-900">{tool.title}</p>
-                <p className="mt-2 text-sm leading-7 text-slate-600">{tool.description}</p>
-              </div>
-            ))}
-          </div>
-        </ExpandablePanel>
-
-        <ExpandablePanel open={panel === "projects"} title="Project Submissions">
-          <div className="grid gap-4 lg:grid-cols-2">
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void saveProject("game", gameUrl);
-              }}
-              className="rounded-[1.5rem] bg-slate-50 p-5"
-            >
-              <p className="text-sm font-medium text-slate-900">Submit your game URL</p>
-              <input
-                value={gameUrl}
-                onChange={(event) => setGameUrl(event.target.value)}
-                placeholder="https://your-game-url.com"
-                className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-              />
-              <button
-                type="submit"
-                disabled={projectPending}
-                className="mt-4 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-70"
-              >
-                Save game URL
-              </button>
-            </form>
-
-            <form
-              onSubmit={(event) => {
-                event.preventDefault();
-                void saveProject("product", productUrl);
-              }}
-              className="rounded-[1.5rem] bg-slate-50 p-5"
-            >
-              <p className="text-sm font-medium text-slate-900">Submit your micro-product URL</p>
-              <input
-                value={productUrl}
-                onChange={(event) => setProductUrl(event.target.value)}
-                placeholder="https://your-product-url.com"
-                className="mt-4 w-full rounded-2xl border border-slate-200 bg-white px-4 py-3 outline-none transition focus:border-slate-400"
-              />
-              <button
-                type="submit"
-                disabled={projectPending}
-                className="mt-4 rounded-full bg-slate-900 px-5 py-3 text-sm font-medium text-white transition hover:bg-slate-800 disabled:opacity-70"
-              >
-                Save product URL
-              </button>
-            </form>
-          </div>
-        </ExpandablePanel>
-
-        <ExpandablePanel open={panel === "log"} title="Daily Builder Log">
-          <div className="grid gap-3">
-            {submissionRows.length === 0 ? (
-              <div className="rounded-[1.5rem] bg-slate-50 px-5 py-5 text-sm text-slate-500">
-                Complete missions to build your log automatically.
-              </div>
-            ) : (
-              submissionRows.map((submission) => (
-                <div key={submission.id} className="rounded-[1.5rem] bg-slate-50 px-5 py-4">
-                  <p className="text-xs uppercase tracking-[0.2em] text-slate-500">
-                    Day {submission.day_number}
+              <div className="mt-6 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-[#f4f2ff] px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-black/45">Progress</p>
+                  <p className="mt-2 text-2xl font-bold text-black">
+                    {completedDays.length} / {missions.length}
                   </p>
-                  <div className="mt-3 space-y-2">
-                    {Object.entries(submission.content).map(([key, value]) => (
-                      <div key={key} className="rounded-2xl bg-white px-4 py-3 text-sm text-slate-600">
-                        {value}
-                      </div>
-                    ))}
-                  </div>
                 </div>
-              ))
-            )}
+                <div className="rounded-2xl bg-[#f7ffd5] px-4 py-4">
+                  <p className="text-xs uppercase tracking-[0.16em] text-black/45">XP</p>
+                  <p className="mt-2 text-2xl font-bold text-black">{xp}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 grid grid-cols-2 gap-3">
+                <StatusCard title="Game" value={gameProject ? "Submitted" : "Not started"} />
+                <StatusCard title="Micro Product" value={productProject ? "Submitted" : "Not started"} />
+              </div>
+
+              {statusMessage ? (
+                <div className="mt-4 rounded-2xl bg-[#f3f6ff] px-4 py-3 text-sm text-black/65">
+                  {statusMessage}
+                </div>
+              ) : null}
+            </div>
           </div>
-        </ExpandablePanel>
+        </div>
       </section>
-    </div>
+
+      <section className="bg-black py-10 text-white">
+        <div className="mx-auto grid max-w-6xl grid-cols-3 gap-6 px-4 text-center sm:px-6 lg:px-8">
+          <div>
+            <p className="text-4xl font-bold text-[var(--lime)]">{completedDays.length}</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Completed days</p>
+          </div>
+          <div>
+            <p className="text-4xl font-bold text-[var(--lime)]">{xp}</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Proof score</p>
+          </div>
+          <div>
+            <p className="text-4xl font-bold text-[var(--lime)]">{level}</p>
+            <p className="mt-2 text-xs uppercase tracking-[0.18em] text-white/60">Current level</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="bg-[#fbfaf6] py-20">
+        <div className="mx-auto max-w-6xl px-4 sm:px-6 lg:px-8">
+          <SectionLabel>WHAT YOU SEE HERE</SectionLabel>
+          <h2 className="mt-8 text-4xl font-bold tracking-[-0.05em] text-black sm:text-5xl">
+            Built for beginners who
+            <br />
+            <span className="text-[var(--blue)]">actually ship.</span>
+          </h2>
+
+          <div className="mt-12 grid gap-4 md:grid-cols-3">
+            <FeatureCard
+              accent="bg-[#eef0ff]"
+              title="One clear mission"
+              description="When you open the dashboard, the next step is already chosen for you."
+            />
+            <FeatureCard
+              accent="bg-[#f7ffd5]"
+              title="Proof score"
+              description="XP grows when you complete missions and submit real project links."
+            />
+            <FeatureCard
+              accent="bg-[#eef0ff]"
+              title="Public builder record"
+              description="Your submissions, launches, and progress stay attached to your account."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section className="section-line bg-[#fbfaf6] py-20">
+        <div className="mx-auto grid max-w-6xl gap-10 px-4 sm:px-6 lg:grid-cols-[0.95fr_1.05fr] lg:px-8">
+          <div>
+            <SectionLabel>PROOF SCORE</SectionLabel>
+            <h2 className="mt-8 text-4xl font-bold tracking-[-0.05em] text-black sm:text-5xl">
+              Your score is your
+              <br />
+              <span className="text-[var(--blue)]">reputation.</span>
+            </h2>
+            <p className="mt-6 max-w-md text-base leading-8 text-black/65">
+              Every finished mission and every shipped project adds visible proof that you can
+              build, not just learn.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            {xpActions.map((action, index) => (
+              <div
+                key={action.label}
+                className={`flex items-center justify-between rounded-2xl border border-black/6 px-5 py-5 text-sm font-medium ${
+                  index === 1
+                    ? "bg-[var(--blue)] text-white"
+                    : index === 2
+                      ? "bg-[var(--lime)] text-black"
+                      : "bg-white text-black"
+                }`}
+              >
+                <span>{action.label}</span>
+                <span className="text-xl font-bold">{action.value}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <section className="section-line bg-[#fbfaf6] py-20">
+        <div className="mx-auto grid max-w-6xl gap-8 px-4 sm:px-6 lg:grid-cols-[0.86fr_1.14fr] lg:px-8">
+          <div className="rounded-[2rem] bg-[var(--blue)] p-8 text-white shadow-[4px_4px_0px_#111]">
+            <SectionLabel>YOUR CONTROL PANEL</SectionLabel>
+            <h2 className="mt-6 text-4xl font-bold tracking-[-0.05em]">
+              One place for progress, projects, and proof.
+            </h2>
+            <p className="mt-5 text-base leading-8 text-white/75">
+              No duplicate buttons. No hidden maze. Just one clean view where you start the next
+              mission and review what you have already shipped.
+            </p>
+            <Link
+              href={`/mission/day-${nextMission.day}`}
+              className="mt-8 inline-flex rounded-xl bg-[var(--lime)] px-6 py-4 text-sm font-bold text-black transition hover:brightness-95"
+            >
+              Start Mission
+            </Link>
+          </div>
+
+          <div className="space-y-5">
+            <DetailTabs active={detailTab} setActive={setDetailTab} />
+
+            {detailTab === "roadmap" ? (
+              <div className="grid gap-3">
+                {missions.map((mission) => {
+                  const done = completedDays.includes(mission.day);
+                  return (
+                    <div key={mission.day} className="rounded-[1.6rem] border border-black/6 bg-white px-5 py-5">
+                      <div className="flex items-center justify-between gap-3">
+                        <div>
+                          <p className="text-xs uppercase tracking-[0.16em] text-black/45">
+                            Day {mission.day} / {mission.phase}
+                          </p>
+                          <p className="mt-2 text-lg font-bold text-black">{mission.title}</p>
+                        </div>
+                        <div
+                          className={`rounded-full px-3 py-1 text-xs font-bold ${
+                            done ? "bg-[var(--lime)] text-black" : "bg-black/[0.05] text-black/55"
+                          }`}
+                        >
+                          {done ? "Done" : "Locked to next"}
+                        </div>
+                      </div>
+                      <p className="mt-3 text-sm leading-7 text-black/60">{mission.summary}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {detailTab === "submissions" ? (
+              <div className="grid gap-4 lg:grid-cols-2">
+                <SubmissionForm
+                  title="Submit your game"
+                  value={gameUrl}
+                  onChange={setGameUrl}
+                  onSubmit={() => void saveProject("game", gameUrl)}
+                  pending={projectPending}
+                  placeholder="https://your-game-url.com"
+                />
+                <SubmissionForm
+                  title="Submit your micro product"
+                  value={productUrl}
+                  onChange={setProductUrl}
+                  onSubmit={() => void saveProject("product", productUrl)}
+                  pending={projectPending}
+                  placeholder="https://your-product-url.com"
+                />
+              </div>
+            ) : null}
+
+            {detailTab === "log" ? (
+              <div className="grid gap-3">
+                {submissionRows.length === 0 ? (
+                  <div className="rounded-[1.6rem] border border-black/6 bg-white px-5 py-5 text-sm text-black/55">
+                    Your builder log fills automatically as you complete missions.
+                  </div>
+                ) : (
+                  submissionRows.map((submission) => (
+                    <div key={submission.id} className="rounded-[1.6rem] border border-black/6 bg-white px-5 py-5">
+                      <p className="text-xs uppercase tracking-[0.16em] text-black/45">
+                        Day {submission.day_number}
+                      </p>
+                      <div className="mt-4 space-y-3">
+                        {Object.values(submission.content).map((value) => (
+                          <div key={value} className="rounded-2xl bg-black/[0.03] px-4 py-3 text-sm text-black/65">
+                            {value}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            ) : null}
+
+            {detailTab === "stack" ? (
+              <div className="grid gap-3 md:grid-cols-3">
+                {stackItems.map((item) => (
+                  <FeatureCard
+                    key={item.title}
+                    accent={item.title === "Resend" ? "bg-[#f7ffd5]" : "bg-[#eef0ff]"}
+                    title={item.title}
+                    description={item.description}
+                  />
+                ))}
+              </div>
+            ) : null}
+          </div>
+        </div>
+      </section>
+    </main>
   );
 }
